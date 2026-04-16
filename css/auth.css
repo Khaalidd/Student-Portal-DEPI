@@ -1,1 +1,51 @@
-/* CSS Code */
+
+
+body {
+    background-color: var(--bg-page);
+}
+
+.leftside-container {
+    background:
+    linear-gradient(rgba(30, 42, 74, 0.7), rgba(30, 42, 74, 0.7)),
+    url("/assets/images/logiin\ background.png") center/cover no-repeat;
+}
+
+.primary-text {
+    color: var(--text-primary);
+}
+
+.primary-color {
+    color: var(--color-primary);
+}
+
+.button-primary {
+    background-color: var(--color-primary);
+    color: var(--text-light);
+    border-radius: 6px;
+    border: none;
+}
+
+.spacing {
+    letter-spacing: 0.65px;
+}
+
+.dropshadow {
+    box-shadow: 0px 4px 24px 0px rgba(0, 0, 0, 0.1);
+}
+
+.field {
+    display: block;
+    width: 100%;
+    padding: 0.375rem 0.75rem;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.field:focus {
+    border-color: var(--color-primary);
+    outline: 0;
+}

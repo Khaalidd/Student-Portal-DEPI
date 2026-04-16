@@ -1,1 +1,48 @@
-/* CSS Code */
+:root {
+  /* ── Primary ── */
+  --color-primary:          #2B5EA7; /* Buttons, links, active */
+  --color-primary-dark:     #1E2A4A; /* Navbar, headings, hover */
+  --color-primary-light:    #D6E8FA; /* Badge bg, highlights */
+
+  /* ── Accent & Status ── */
+  --color-accent:           #0D9488; /* Secondary actions */
+  --color-success:          #16A34A; /* Pass, confirmed */
+  --color-warning:          #D97706; /* Pending, alert */
+  --color-danger:           #DC4A3D; /* Error, fail, delete */
+
+  /* ── Backgrounds ── */
+  --bg-page:                #F4F7FC; /* Overall page background */
+  --bg-card:                #FFFFFF; /* Cards, modals, forms */
+  --bg-muted:               #E9EEF6; /* Alt rows, disabled */
+
+  /* ── Text ── */
+  --text-primary:           #111827; /* Main headings, body text */
+  --text-secondary:         #4B5563; /* Paragraph text, descriptions */
+  --text-muted:             #9CA3AF; /* Placeholders, captions, timestamps */
+  --text-light:             #FFFFFF; /* Text on dark/colored backgrounds */
+
+  /* ── Border ── */
+  --border-color:           #E2E8F0; /* Card borders, input borders, table lines */
+
+  /* ── Badge Backgrounds ── */
+  --badge-success-bg:       #DCFCE7; /* Pass, active, completed */
+  --badge-success-text:     #15803D; 
+  --badge-danger-bg:        #FEE2E2; /* Fail, error, deleted */
+  --badge-danger-text:      #B91C1C; 
+  --badge-warning-bg:       #FEF3C7; /* Pending, in progress */
+  --badge-warning-text:     #92400E; 
+  --badge-info-bg:          #D6E8FA; /* Info, neutral status */
+  --badge-info-text:        #1E2A4A; 
+
+}
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+}
