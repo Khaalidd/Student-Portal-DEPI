@@ -3,8 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Acadex Student Portal – Your personal academic dashboard with GPA, courses, and notifications at a glance." />
     <title>Acadex - Dashboard</title>
     <link rel="icon" type="image/x-icon" href="/assets/icons/Container.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="../css/global.css" />
     <link rel="stylesheet" href="../css/sidebar.css" />
     <link rel="stylesheet" href="../css/dashboard.css" />
@@ -16,14 +20,177 @@
       <app-sidebar></app-sidebar>
 
       <div class="main-screen">
-        <div class="header">
-          <h1>Dashboard</h1>
-        </div>
 
-        <!-- Dashboard content goes here -->
+        <!-- ── Welcome Banner ── -->
+        <section class="welcome-banner" aria-label="Welcome banner">
+          <div class="welcome-text">
+            <p class="welcome-label">Good to see you back 👋</p>
+            <h1 class="welcome-name">Welcome, <span id="studentName">Student</span>!</h1>
+            <p class="welcome-sub">Here's a quick overview of your academic progress.</p>
+          </div>
+          <div class="welcome-icon" aria-hidden="true">
+            <svg width="80" height="80" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M8.211 2.047a.5.5 0 0 0-.422 0l-7.5 3.5a.5.5 0 0 0 .025.917l7.5 3a.5.5 0 0 0 .372 0L14 7.14V13a1 1 0 0 0-1 1v2h3v-2a1 1 0 0 0-1-1V6.739l.686-.275a.5.5 0 0 0 .025-.917l-7.5-3.5Z"/>
+              <path d="M4.176 9.032a.5.5 0 0 0-.656.327l-.5 1.7a.5.5 0 0 0 .294.605l4.5 1.8a.5.5 0 0 0 .372 0l4.5-1.8a.5.5 0 0 0 .294-.605l-.5-1.7a.5.5 0 0 0-.656-.327L8 10.466 4.176 9.032Z"/>
+            </svg>
+          </div>
+        </section>
 
-      </div>
-    </div>
+        <!-- ── Quick-Stat Cards ── -->
+        <section class="stats-grid" aria-label="Quick statistics">
+
+          <div class="stat-card stat-card--gpa" id="statGpa">
+            <div class="stat-card__icon" aria-hidden="true">
+              <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v13.5a.5.5 0 0 1-.777.416L8 13.101l-5.223 2.815A.5.5 0 0 1 2 15.5V2zm2-1a1 1 0 0 0-1 1v12.566l4.723-2.482a.5.5 0 0 1 .554 0L13 14.566V2a1 1 0 0 0-1-1H4z"/>
+                <path d="M5.5 6.5A.5.5 0 0 1 6 6h4a.5.5 0 0 1 0 1H6a.5.5 0 0 1-.5-.5zm0 3A.5.5 0 0 1 6 9h2a.5.5 0 0 1 0 1H6a.5.5 0 0 1-.5-.5z"/>
+              </svg>
+            </div>
+            <div class="stat-card__body">
+              <p class="stat-card__label">Current GPA</p>
+              <p class="stat-card__value" id="statGpaValue">3.75</p>
+              <p class="stat-card__sub">Out of 4.00</p>
+            </div>
+          </div>
+
+          <div class="stat-card stat-card--courses" id="statCourses">
+            <div class="stat-card__icon" aria-hidden="true">
+              <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M1 2.828c.885-.37 2.154-.769 3.388-.893 1.33-.134 2.458.063 3.112.752v9.746c-.935-.53-2.12-.603-3.213-.493-1.18.12-2.37.461-3.287.811V2.828zm7.5-.141c.654-.689 1.782-.886 3.112-.752 1.234.124 2.503.523 3.388.893v9.923c-.918-.35-2.107-.692-3.287-.81-1.094-.111-2.278-.039-3.213.492V2.687zM8 1.783C7.015.936 5.587.81 4.287.94c-1.514.153-3.042.672-3.994 1.105A.5.5 0 0 0 0 2.5v11a.5.5 0 0 0 .707.455c.882-.4 2.303-.881 3.68-1.02 1.409-.142 2.59.087 3.223.877a.5.5 0 0 0 .78 0c.633-.79 1.814-1.019 3.222-.877 1.378.139 2.8.62 3.681 1.02A.5.5 0 0 0 16 13.5v-11a.5.5 0 0 0-.293-.455c-.952-.433-2.48-.952-3.994-1.105C10.413.809 8.985.936 8 1.783z"/>
+              </svg>
+            </div>
+            <div class="stat-card__body">
+              <p class="stat-card__label">Enrolled Courses</p>
+              <p class="stat-card__value" id="statCoursesValue">6</p>
+              <p class="stat-card__sub">This semester</p>
+            </div>
+          </div>
+
+          <div class="stat-card stat-card--notifs" id="statNotifs">
+            <div class="stat-card__icon" aria-hidden="true">
+              <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zM8 1.918l-.797.161A4.002 4.002 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4.002 4.002 0 0 0-3.203-3.92L8 1.917zM14.22 12c.223.447.481.801.78 1H1c.299-.199.557-.553.78-1C2.68 10.2 3 6.88 3 6c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0A5.002 5.002 0 0 1 13 6c0 .88.32 4.2 1.22 6z"/>
+              </svg>
+            </div>
+            <div class="stat-card__body">
+              <p class="stat-card__label">Notifications</p>
+              <p class="stat-card__value" id="statNotifsValue">4</p>
+              <p class="stat-card__sub">Unread messages</p>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- ── Bottom Grid: Recent Activity + Announcements ── -->
+        <div class="bottom-grid">
+
+          <!-- Recent Activity -->
+          <section class="panel" aria-labelledby="activityTitle">
+            <div class="panel__header">
+              <h2 class="panel__title" id="activityTitle">Recent Activity</h2>
+              <span class="panel__badge">Last 7 days</span>
+            </div>
+            <ul class="activity-list" id="activityList">
+
+              <li class="activity-item">
+                <div class="activity-dot activity-dot--success"></div>
+                <div class="activity-content">
+                  <p class="activity-title">Grade posted for <strong>Database Systems</strong></p>
+                  <time class="activity-time" datetime="2026-04-17">Yesterday, 3:45 PM</time>
+                </div>
+                <span class="badge badge--success">Pass</span>
+              </li>
+
+              <li class="activity-item">
+                <div class="activity-dot activity-dot--primary"></div>
+                <div class="activity-content">
+                  <p class="activity-title">Enrolled in <strong>Software Engineering</strong></p>
+                  <time class="activity-time" datetime="2026-04-15">Apr 15, 10:00 AM</time>
+                </div>
+                <span class="badge badge--info">Enrolled</span>
+              </li>
+
+              <li class="activity-item">
+                <div class="activity-dot activity-dot--warning"></div>
+                <div class="activity-content">
+                  <p class="activity-title">Assignment due: <strong>Data Structures Lab</strong></p>
+                  <time class="activity-time" datetime="2026-04-20">Apr 20, 11:59 PM</time>
+                </div>
+                <span class="badge badge--warning">Pending</span>
+              </li>
+
+              <li class="activity-item">
+                <div class="activity-dot activity-dot--danger"></div>
+                <div class="activity-content">
+                  <p class="activity-title">Grade updated for <strong>Calculus II</strong></p>
+                  <time class="activity-time" datetime="2026-04-12">Apr 12, 9:00 AM</time>
+                </div>
+                <span class="badge badge--danger">Fail</span>
+              </li>
+
+              <li class="activity-item">
+                <div class="activity-dot activity-dot--success"></div>
+                <div class="activity-content">
+                  <p class="activity-title">Profile information updated</p>
+                  <time class="activity-time" datetime="2026-04-11">Apr 11, 2:00 PM</time>
+                </div>
+                <span class="badge badge--success">Done</span>
+              </li>
+
+            </ul>
+          </section>
+
+          <!-- Announcements -->
+          <section class="panel" aria-labelledby="announcementsTitle">
+            <div class="panel__header">
+              <h2 class="panel__title" id="announcementsTitle">Announcements</h2>
+              <span class="panel__badge panel__badge--accent">New</span>
+            </div>
+            <ul class="announcements-list" id="announcementsList">
+
+              <li class="announcement-item announcement-item--unread">
+                <div class="announcement-meta">
+                  <span class="announcement-tag tag--primary">Academic</span>
+                  <time class="activity-time" datetime="2026-04-18">Today</time>
+                </div>
+                <p class="announcement-title">Mid-term exam schedule published</p>
+                <p class="announcement-body">The mid-term examination timetable for Spring 2026 is now available. Check the academic calendar for your course slots.</p>
+              </li>
+
+              <li class="announcement-item announcement-item--unread">
+                <div class="announcement-meta">
+                  <span class="announcement-tag tag--warning">Deadline</span>
+                  <time class="activity-time" datetime="2026-04-19">Tomorrow</time>
+                </div>
+                <p class="announcement-title">Course add/drop deadline – Apr 19</p>
+                <p class="announcement-body">Last day to add or drop courses without a grade penalty. Visit the registrar's office or the portal.</p>
+              </li>
+
+              <li class="announcement-item">
+                <div class="announcement-meta">
+                  <span class="announcement-tag tag--accent">Event</span>
+                  <time class="activity-time" datetime="2026-04-22">Apr 22</time>
+                </div>
+                <p class="announcement-title">Career Fair – Spring 2026</p>
+                <p class="announcement-body">Join us for the annual career fair. Over 40 companies will be recruiting. Bring your updated CV!</p>
+              </li>
+
+              <li class="announcement-item">
+                <div class="announcement-meta">
+                  <span class="announcement-tag tag--primary">IT Notice</span>
+                  <time class="activity-time" datetime="2026-04-10">Apr 10</time>
+                </div>
+                <p class="announcement-title">Portal maintenance – April 25</p>
+                <p class="announcement-body">The student portal will be down for scheduled maintenance on April 25 from 2:00 AM – 6:00 AM.</p>
+              </li>
+
+            </ul>
+          </section>
+
+        </div><!-- /.bottom-grid -->
+
+      </div><!-- /.main-screen -->
+    </div><!-- /.layout -->
 
     <script src="../js/sidebar.js"></script>
     <script src="../js/dashboard.js"></script>
