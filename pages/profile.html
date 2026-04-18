@@ -2,88 +2,82 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Student Profile</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Acadex - Profile</title>
+    <link rel="icon" type="image/x-icon" href="/assets/icons/Container.png" />
     <link href="../css/bootstrap/bootstrap.css" rel="stylesheet" />
-    <link href="../css/profile.css" rel="stylesheet" />
     <link rel="stylesheet" href="../css/global.css" />
+    <link rel="stylesheet" href="../css/sidebar.css" />
+    <link rel="stylesheet" href="../css/profile.css" />
   </head>
 
-  <body>
-    <div class="container-fluid">
-      <div class="row min-vh-100">
-        <div class="col-md-3 sidebar">
-          <h4 class="fw-bold">Student Panel</h4>
-          <a href="#" class="active">Profile</a>
-          <a href="#">Dashboard</a>
-          <a href="#">Courses</a>
-          <a href="#">Grades</a>
-          <a href="#">Logout</a>
+  <body class="page">
+    <div class="layout">
+      <app-sidebar></app-sidebar>
+
+      <div class="main-screen">
+        <div class="header">
+          <h1>My Profile</h1>
         </div>
 
-        <div class="col-md-9 p-4 overflow-auto" style="height: 100vh">
-          <div
-            class="profile-card text-center mx-auto"
-            style="max-width: 700px"
-          >
-            <img src="../assets/images/profile.jfif" class="avatar mb-3" />
-            <h3 class="fw-bold">Omar Ahmed</h3>
-            <p class="text-muted">Computer Science Student</p>
+        <div class="profile-card text-center mx-auto" style="max-width: 700px">
+          <img
+            src="../assets/images/profile.jfif"
+            class="avatar mb-3"
+            alt="Profile photo"
+          />
+          <h3 class="fw-bold">Omar Ahmed</h3>
+          <p class="text-muted">Computer Science Student</p>
 
-            <div class="row mt-4 text-start">
-              <div class="col-md-6">
-                <p><strong>ID:</strong> 20231234</p>
-                <p><strong>Email:</strong> Omar.ahmed@email.com</p>
-              </div>
-
-              <div class="col-md-6">
-                <p><strong>Major:</strong> CS</p>
-                <p><strong>Level:</strong> 3</p>
-              </div>
+          <div class="row mt-4 text-start">
+            <div class="col-md-6">
+              <p><strong>ID:</strong> 20231234</p>
+              <p><strong>Email:</strong> Omar.ahmed@email.com</p>
             </div>
+            <div class="col-md-6">
+              <p><strong>Major:</strong> CS</p>
+              <p><strong>Level:</strong> 3</p>
+            </div>
+          </div>
 
-            <hr />
+          <hr />
 
-            <div class="row justify-content-center">
-              <div class="col-md-8">
-                <h5 class="mb-3 fw-semibold">Edit Info</h5>
+          <div class="row justify-content-center">
+            <div class="col-md-8">
+              <h5 class="mb-3 fw-semibold">Edit Info</h5>
 
-                <form class="text-start">
-                  <div class="mb-3">
-                    <label class="form-label">Name</label>
-                    <input
-                      type="text"
-                      class="form-control"
-                      value="Omar Ahmed"
-                    />
-                  </div>
+              <form class="text-start">
+                <div class="mb-3">
+                  <label class="form-label">Name</label>
+                  <input type="text" class="form-control" value="Omar Ahmed" />
+                </div>
 
-                  <div class="mb-3">
-                    <label class="form-label">Email</label>
-                    <input
-                      type="email"
-                      class="form-control"
-                      value="Omar.ahmed@email.com"
-                    />
-                  </div>
+                <div class="mb-3">
+                  <label class="form-label">Email</label>
+                  <input
+                    type="email"
+                    class="form-control"
+                    value="Omar.ahmed@email.com"
+                  />
+                </div>
 
-                  <div class="mb-3">
-                    <label class="form-label">Major</label>
-                    <input
-                      type="text"
-                      class="form-control"
-                      value="Computer Science"
-                    />
-                  </div>
+                <div class="mb-3">
+                  <label class="form-label">Major</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    value="Computer Science"
+                  />
+                </div>
 
-                  <button class="btn btn-custom w-100 mt-2">
-                    Save Changes
-                  </button>
-                </form>
-              </div>
+                <button class="btn btn-custom w-100 mt-2">Save Changes</button>
+              </form>
             </div>
           </div>
         </div>
       </div>
     </div>
+
+    <script src="../js/sidebar.js"></script>
   </body>
 </html>

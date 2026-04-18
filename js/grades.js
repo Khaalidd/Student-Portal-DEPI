@@ -145,18 +145,6 @@ document.getElementById("creditHr").innerText =
 
 }
 
-const menuToggle = document.getElementById("menuToggle");
-const sidebar = document.querySelector(".sidebar");
-
-menuToggle.addEventListener("click", () => {
-    sidebar.classList.toggle("open");
-     if (sidebar.classList.contains("open")) {
-        menuToggle.textContent = "✖";
-    } else {
-        menuToggle.textContent = "☰";
-    }
-});
-
 document.getElementById("semesterFilter").addEventListener("change", updateUI);
 document.getElementById("sortBtn").addEventListener("click", updateUI);
 updateUI();
