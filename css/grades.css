@@ -1,1 +1,251 @@
 /* CSS Code */
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: "Inter", sans-serif;
+}
+
+.layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+.menu-toggle {
+    display: none;
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    z-index: 1000;
+
+    background: var(--color-primary-dark);
+    color: var(--text-light);
+    border: none;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.sidebar {
+
+    background: var(--color-primary-dark);
+    color: var(--text-light);
+    padding: 20px;
+    display: flex;
+    flex: 0 0 250px;
+    flex-direction: column;
+}
+
+.bar-wrapper{
+    position: fixed;
+}
+
+.sidebar h3 {
+    margin-bottom: 25px;
+}
+
+.nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.nav li {
+    margin-bottom: 12px;
+}
+
+.nav a {
+    display: block;
+    padding: 10px 12px;
+    border-radius: 6px;
+    text-decoration: none;
+    color: var(--text-light);
+    transition: 0.2s ease;
+}
+
+.nav a:hover {
+    background: var(--color-primary);
+}
+
+.nav a.active {
+    background: var(--color-primary);
+}
+
+.main-screen {
+    flex: 1;
+    background: var(--bg-page);
+    padding: 25px;
+}
+
+.header h1 {
+    margin-bottom: 20px;
+    color: var(--text-primary);
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.stats > div {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 15px;
+    transition: 0.2s ease;
+}
+
+.stats > div:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+}
+
+.stats p:first-child {
+    color: var(--text-secondary);
+    font-size: 13px;
+    margin-bottom: 5px;
+}
+
+.stats p:last-child {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--text-primary);
+}
+
+.filter,
+.sort {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.filter select,
+.sort select {
+    padding: 6px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+.sort button {
+    padding: 7px 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background: var(--color-primary);
+    color: var(--text-light);
+    transition: 0.2s ease;
+}
+
+.sort button:hover {
+    background: var(--color-primary-dark);
+}
+
+.tables {
+    margin-top: 20px;
+}
+
+.semester-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.semester-card h3 {
+    color: var(--text-primary);
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.gradesTable {
+    width: 100%;
+    border-collapse: collapse;
+    overflow: hidden;
+    margin: 0 auto;
+    table-layout: fixed;
+}
+
+.gradesTable th,
+.gradesTable td {
+    padding: 14px 16px;
+    vertical-align: middle;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+    width: 2%;
+}
+
+.gradesTable th {
+    background: var(--bg-muted);
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.gradesTable tbody tr:hover {
+    background: var(--bg-muted);
+}
+
+.pass {
+    background: var(--badge-success-bg);
+    color: var(--badge-success-text);
+}
+
+.fail {
+    background: var(--badge-danger-bg);
+    color: var(--badge-danger-text);
+}
+
+.pending {
+    background: var(--badge-warning-bg);
+    color: var(--badge-warning-text);
+}
+
+#sem1-gpa, #sem2-gpa, #sem3-gpa {
+    padding: 14px 16px;
+}
+
+@media (max-width: 768px) {
+
+    .menu-toggle {
+        display: block;
+    }
+
+    .layout {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: -250px;
+        height: 100vh;
+        width: 250px;
+        transition: 0.3s ease;
+        z-index: 999;
+    }
+
+    .sidebar.open {
+        left: 0;
+    }
+
+    .main-screen {
+        margin-left: 0;
+        padding-top: 60px;
+    }
+}
