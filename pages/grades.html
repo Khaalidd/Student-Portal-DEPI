@@ -9,29 +9,13 @@
     <link rel="stylesheet" href="../css/global.css" />
     <link rel="stylesheet" href="../css/auth.css" />
     <link rel="stylesheet" href="../css/grades.css"/>
+    <link rel="stylesheet" href="../css/sidebar.css"/>
 </head>
 
 <body class="page">
     <div class="layout">
 
-        <div class="sidebar">
-
-            <div class="bar-wrapper">
-                <button class="menu-toggle" id="menuToggle">☰</button>
-                <h3>Student Panel</h3>
-                <nav class="nav">
-                    <ul>
-                        <li><a href="#">Profile</a></li>
-                        <li><a href="#">Dashboard</a></li>
-                        <li><a href="#">Courses</a></li>
-                        <li><a href="#" class="active">Grades</a></li>
-                        <li><a href="#">Logout</a></li>
-                        
-                    </ul>
-                </nav>
-            </div>
-
-        </div>
+        <app-sidebar></app-sidebar>
 
         <div class="main-screen">
 
@@ -166,6 +150,7 @@
 
     </div>
 
+    <script src="../js/sidebar.js"></script>
     <script src="../js/grades.js"></script>
 
 </body>
