@@ -19,9 +19,35 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
-  // We will connect this to the real API later.
+  // Mock login implementation
   async function login(email, password) {
-    throw new Error('login() is not connected to an API yet.');
+    // Simulate a brief network delay (e.g., 500ms) for a realistic feel
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    if (password !== '123456') {
+      throw new Error('Invalid email or password.');
+    }
+
+    let role = '';
+    let name = '';
+
+    if (email === 'student@depi.com') {
+      role = 'student';
+      name = 'John Student';
+    } else if (email === 'instructor@depi.com') {
+      role = 'instructor';
+      name = 'Jane Instructor';
+    } else if (email === 'admin@depi.com') {
+      role = 'admin';
+      name = 'System Admin';
+    } else {
+      throw new Error('User not found. Use one of the demo emails.');
+    }
+
+    const authenticatedUser = { email, role, name };
+    setUser(authenticatedUser);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(authenticatedUser));
+    return authenticatedUser;
   }
 
   function logout() {
