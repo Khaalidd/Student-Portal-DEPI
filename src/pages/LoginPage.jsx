@@ -4,7 +4,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
-  const { login, isAuthenticated, user } = useAuth();
+  const { login, isLoggedIn, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -14,7 +14,7 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
 
   // Already logged in? Don't show the login form — bounce straight to their dashboard.
-  if (isAuthenticated) {
+  if (isLoggedIn) {
     const redirectTo = location.state?.from?.pathname || `/${user.role}/dashboard`;
     return <Navigate to={redirectTo} replace />;
   }
