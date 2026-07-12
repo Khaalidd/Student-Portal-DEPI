@@ -35,7 +35,7 @@ export function AuthProvider({ children }) {
       role = 'student';
       name = 'John Student';
     } else if (email === 'instructor@depi.com') {
-      role = 'instructor';
+      role = 'instructor';ذذ
       name = 'Jane Instructor';
     } else if (email === 'admin@depi.com') {
       role = 'admin';
