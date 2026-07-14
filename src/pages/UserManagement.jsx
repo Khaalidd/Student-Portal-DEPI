@@ -1,271 +1,433 @@
-import { useState } from "react";
 
-const imgUserProfile = "https://www.figma.com/api/mcp/asset/85366406-af28-409f-9953-d29e020f2975";
+import { useMemo, useState } from 'react';
 
-const NAV_ITEMS = [
-  { label: "Dashboard", icon: "grid" },
-  { label: "My Courses", icon: "book" },
-  { label: "Grades", icon: "star" },
-  { label: "Schedule", icon: "calendar" },
-  { label: "Notifications", icon: "bell" },
-  { label: "Settings", icon: "gear" },
-];
+
 
 const USERS = [
-  { name: "Jane Smith", email: "jane.smith@eduportal.edu", role: "Student", status: "Active", lastLogin: "2 hours ago", initials: "JS" },
-  { name: "Michael Roberts", email: "m.roberts@eduportal.edu", role: "Instructor", status: "Active", lastLogin: "Yesterday", initials: "MR" },
-  { name: "Alice Lee", email: "alice.lee@eduportal.edu", role: "Student", status: "Inactive", lastLogin: "Oct 12, 2023", initials: "AL" },
-  { name: "Admin User", email: "admin@eduportal.edu", role: "Admin", status: "Active", lastLogin: "Just now", initials: "AU" },
+  {
+    id: 1,
+    name: 'Dr. Sarah Jenkins',
+    email: 's.jenkins@eduportal.edu',
+    role: 'Instructor',
+    status: 'Active',
+    lastLogin: '2 hours ago',
+    avatar: 'https://i.pravatar.cc/64?img=47',
+  },
+  {
+    id: 2,
+    name: 'Marcus Lee',
+    email: 'm.lee24@student.edu',
+    role: 'Student',
+    status: 'Active',
+    lastLogin: 'Yesterday',
+    initials: 'ML',
+  },
+  {
+    id: 3,
+    name: 'David Chen',
+    email: 'admin@eduportal.edu',
+    role: 'Admin',
+    status: 'Offline',
+    lastLogin: 'Oct 15, 2023',
+    avatar: 'https://i.pravatar.cc/64?img=12',
+  },
+  {
+    id: 4,
+    name: 'Elena Patel',
+    email: 'e.patel@student.edu',
+    role: 'Student',
+    status: 'Pending',
+    lastLogin: 'Just now',
+    initials: 'EP',
+  },
 ];
 
-function Icon({ name, size = 18 }) {
-  const c = { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" };
-  switch (name) {
-    case "grid": return (<svg {...c}><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></svg>);
-    case "book": return (<svg {...c}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></svg>);
-    case "star": return (<svg {...c}><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9 12 2" /></svg>);
-    case "calendar": return (<svg {...c}><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>);
-    case "bell": return (<svg {...c}><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>);
-    case "gear": return (<svg {...c}><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>);
-    case "search": return (<svg {...c}><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>);
-    case "apps": return (<svg {...c}><circle cx="5" cy="5" r="1.5" /><circle cx="12" cy="5" r="1.5" /><circle cx="19" cy="5" r="1.5" /><circle cx="5" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="19" cy="12" r="1.5" /><circle cx="5" cy="19" r="1.5" /><circle cx="12" cy="19" r="1.5" /><circle cx="19" cy="19" r="1.5" /></svg>);
-    case "chevron-down": return (<svg {...c}><polyline points="6 9 12 15 18 9" /></svg>);
-    case "filter": return (<svg {...c}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>);
-    case "download": return (<svg {...c}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>);
-    case "edit": return (<svg {...c}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>);
-    case "dots": return (<svg {...c}><circle cx="12" cy="5" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="12" cy="19" r="1" /></svg>);
-    case "chevron-left": return (<svg {...c}><polyline points="15 18 9 12 15 6" /></svg>);
-    case "chevron-right": return (<svg {...c}><polyline points="9 18 15 12 9 6" /></svg>);
-    case "plus": return (<svg {...c}><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>);
-    case "menu": return (<svg {...c}><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>);
-    default: return null;
+const ROLE_STYLES = {
+  Instructor: 'bg-[#e6f4f1] text-[#005c55] border-[#bfded9]',
+  Student: 'bg-[#e7eeff] text-[#1e3a8a] border-[#c7d7ff]',
+  Admin: 'bg-[#111c2d] text-white border-[#111c2d]',
+};
+
+const STATUS_STYLES = {
+  Active: { dot: 'bg-[#16a34a]', text: 'text-[#16a34a]' },
+  Inactive: { dot: 'bg-[#9ca3af]', text: 'text-[#6b7280]' },
+  Offline: { dot: 'bg-[#dc2626]', text: 'text-[#dc2626]' },
+  Pending: { dot: 'bg-[#d97706]', text: 'text-[#d97706]' },
+};
+
+const FILTER_CHIPS = ['All Users', 'Active', 'Pending', 'Instructors'];
+
+function Avatar({ user }) {
+  if (user.avatar) {
+    return (
+      <img
+        src={user.avatar}
+        alt={user.name}
+        className="size-[36px] shrink-0 rounded-full object-cover"
+      />
+    );
   }
+  return (
+    <div className="flex size-[36px] shrink-0 items-center justify-center rounded-full bg-[#005c55] text-[12px] font-bold text-white">
+      {user.initials}
+    </div>
+  );
+}
+
+function RoleBadge({ role }) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-[10px] py-[2px] text-[11px] font-semibold ${ROLE_STYLES[role]}`}
+    >
+      {role}
+    </span>
+  );
+}
+
+function StatusBadge({ status }) {
+  const style = STATUS_STYLES[status];
+  return (
+    <span className={`inline-flex items-center gap-[6px] text-[13px] font-medium ${style.text}`}>
+      <span className={`size-[6px] rounded-full ${style.dot}`} />
+      {status}
+    </span>
+  );
+}
+
+function KebabMenu() {
+  return (
+    <button
+      type="button"
+      className="rounded-[6px] p-[6px] text-[#3e4947] hover:bg-[#f9f9ff]"
+      aria-label="More actions"
+    >
+      <svg className="size-[16px]" viewBox="0 0 16 16" fill="currentColor">
+        <circle cx="8" cy="3" r="1.4" />
+        <circle cx="8" cy="8" r="1.4" />
+        <circle cx="8" cy="13" r="1.4" />
+      </svg>
+    </button>
+  );
 }
 
 export default function UserManagement() {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [checked, setChecked] = useState({});
+  const [search, setSearch] = useState('');
+  const [activeChip, setActiveChip] = useState('All Users');
+  const [selected, setSelected] = useState([]);
 
-  function toggleRow(name) {
-    setChecked((prev) => ({ ...prev, [name]: !prev[name] }));
-  }
+  const filteredUsers = useMemo(() => {
+    return USERS.filter((u) => {
+      const matchesSearch =
+        u.name.toLowerCase().includes(search.toLowerCase()) ||
+        u.email.toLowerCase().includes(search.toLowerCase());
+
+      if (!matchesSearch) return false;
+
+      if (activeChip === 'All Users') return true;
+      if (activeChip === 'Active') return u.status === 'Active';
+      if (activeChip === 'Pending') return u.status === 'Pending';
+      if (activeChip === 'Instructors') return u.role === 'Instructor';
+      return true;
+    });
+  }, [search, activeChip]);
+
+  const toggleSelected = (id) => {
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const toggleSelectAll = () => {
+    setSelected((prev) => (prev.length === filteredUsers.length ? [] : filteredUsers.map((u) => u.id)));
+  };
 
   return (
-    <div className="um-page">
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
-        .um-page { display: flex; min-height: 100vh; background: #F9F9FF; font-family: 'Inter', Arial, sans-serif; }
-
-        .um-sidebar { width: 260px; background: #fff; border-right: 1px solid #BDC9C6; display: flex; flex-direction: column; flex-shrink: 0; }
-        .um-logo-row { display: flex; align-items: center; gap: 16px; padding: 24px; }
-        .um-logo-box { width: 40px; height: 40px; border-radius: 8px; background: #005C55; flex-shrink: 0; }
-        .um-brand { color: #005C55; font-weight: 700; font-size: 24px; line-height: 32px; margin: 0; }
-        .um-brand-sub { color: #3E4947; font-weight: 600; font-size: 12px; margin: 0; }
-        .um-nav { padding: 16px 12px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
-        .um-nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; color: #3E4947; border-left: 4px solid transparent; cursor: pointer; }
-        .um-nav-item.active { font-weight: 700; color: #005C55; background: rgba(0,92,85,0.1); border-left: 4px solid #005C55; padding-left: 12px; }
-
-        .um-main-col { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-        .um-header { height: 64px; border-bottom: 1px solid #BDC9C6; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; background: rgba(249,249,255,0.8); backdrop-filter: blur(6px); gap: 24px; }
-        .um-menu-btn { display: none; background: none; border: none; color: #3E4947; cursor: pointer; }
-        .um-search-wrap { position: relative; flex: 1 0 0; min-width: 0; max-width: 420px; }
-        .um-search-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: #6B7280; }
-        .um-search-input { width: 100%; box-sizing: border-box; padding: 11px 16px 11px 40px; border-radius: 9999px; border: 1px solid #BDC9C6; background: #F0F3FF; font-size: 16px; color: #111C2D; outline: none; }
-        .um-header-icons { display: flex; align-items: center; gap: 16px; flex-shrink: 0; color: #3E4947; }
-        .um-avatar-sm { width: 32px; height: 32px; border-radius: 50%; border: 1px solid #BDC9C6; object-fit: cover; }
-
-        .um-main { max-width: 1280px; padding: 24px; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px; }
-        .um-top-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-        .um-h1 { font-size: 28px; font-weight: 700; color: #111C2D; margin: 0; }
-        .um-subtitle { color: #3E4947; font-size: 14px; margin: 6px 0 0; }
-        .um-add-btn { background: #005C55; color: #fff; border: none; border-radius: 8px; padding: 10px 18px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
-
-        .um-filter-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-        .um-filter-search { flex: 1; min-width: 200px; position: relative; }
-        .um-filter-input { width: 100%; box-sizing: border-box; padding: 9px 12px 9px 36px; border-radius: 8px; border: 1px solid #BDC9C6; background: #fff; font-size: 14px; color: #111C2D; outline: none; }
-        .um-filter-icon-abs { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: #6B7280; }
-        .um-select { padding: 9px 32px 9px 12px; border-radius: 8px; border: 1px solid #BDC9C6; background: #fff; font-size: 14px; color: #3E4947; outline: none; cursor: pointer; }
-        .um-icon-btn { width: 36px; height: 36px; border-radius: 8px; border: 1px solid #BDC9C6; background: #fff; color: #3E4947; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
-
-        .um-table-card { background: #fff; border: 1px solid #BDC9C6; border-radius: 12px; overflow: hidden; }
-        .um-table-scroll { overflow-x: auto; }
-        .um-table { width: 100%; border-collapse: collapse; min-width: 640px; }
-        .um-table th { text-align: left; font-size: 11px; font-weight: 700; color: #3E4947; text-transform: uppercase; letter-spacing: 0.4px; padding: 12px 16px; border-bottom: 1px solid #EEF1F0; background: #fff; }
-        .um-table td { padding: 14px 16px; border-bottom: 1px solid #EEF1F0; font-size: 13px; color: #111C2D; vertical-align: middle; }
-        .um-table tr:last-child td { border-bottom: none; }
-        .um-user-cell { display: flex; align-items: center; gap: 10px; }
-        .um-user-avatar { width: 30px; height: 30px; border-radius: 50%; background: #DEE8FF; color: #005C55; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; flex-shrink: 0; }
-        .um-user-name { font-weight: 600; margin: 0; }
-        .um-user-email { font-size: 11px; color: #3E4947; margin: 0; }
-        .um-role-pill { display: inline-block; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 9999px; background: #EEF0F5; color: #4B5563; white-space: nowrap; }
-        .um-role-pill.admin { background: rgba(0,92,85,0.14); color: #005C55; }
-        .um-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; }
-        .um-status-dot { width: 7px; height: 7px; border-radius: 50%; }
-        .um-status.active .um-status-dot { background: #059669; }
-        .um-status.active { color: #059669; }
-        .um-status.inactive .um-status-dot { background: #9CA3AF; }
-        .um-status.inactive { color: #6B7280; }
-        .um-actions-cell { display: flex; align-items: center; gap: 8px; }
-        .um-row-btn { background: none; border: none; color: #6B7280; cursor: pointer; padding: 4px; display: flex; }
-        .um-checkbox { width: 16px; height: 16px; accent-color: #005C55; cursor: pointer; }
-
-        .um-table-footer { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; font-size: 12px; color: #3E4947; }
-        .um-pagination { display: flex; align-items: center; gap: 4px; }
-        .um-page-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid #BDC9C6; background: #fff; color: #3E4947; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; font-weight: 600; }
-        .um-page-btn.active { background: #005C55; border-color: #005C55; color: #fff; }
-
-        .um-overlay { display: none; }
-
-        @media (max-width: 900px) {
-          .um-table th:nth-child(5), .um-table td:nth-child(5) { display: none; }
-        }
-
-        @media (max-width: 640px) {
-          .um-sidebar { position: fixed; top: 0; left: 0; bottom: 0; z-index: 50; transform: translateX(-100%); transition: transform 0.2s ease; box-shadow: 2px 0 12px rgba(0,0,0,0.15); }
-          .um-sidebar.open { transform: translateX(0); }
-          .um-menu-btn { display: block; }
-          .um-overlay.open { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 40; }
-          .um-header { padding: 0 12px; }
-          .um-main { padding: 16px; }
-          .um-h1 { font-size: 22px; }
-          .um-add-btn { width: 100%; justify-content: center; }
-          .um-top-row { flex-direction: column; align-items: stretch; }
-          .um-table th:nth-child(4), .um-table td:nth-child(4) { display: none; }
-        }
-      `}</style>
-
-      <div className={`um-overlay ${menuOpen ? "open" : ""}`} onClick={() => setMenuOpen(false)} />
-
-      <aside className={`um-sidebar ${menuOpen ? "open" : ""}`}>
-        <div className="um-logo-row">
-          <div className="um-logo-box" />
-          <div>
-            <p className="um-brand">EduPortal</p>
-            <p className="um-brand-sub">Student Management</p>
-          </div>
+    <div className="w-full">
+      {/* ===== Mobile layout ===== */}
+      <div className="mx-auto flex w-full max-w-[400px] flex-col gap-[16px] px-4 py-6 lg:hidden">
+        <div className="flex flex-col gap-[4px]">
+          <h1 className="text-[20px] font-bold leading-[26px] text-[#111c2d]">User Management</h1>
+          <p className="text-[13px] leading-[18px] text-[#3e4947]">
+            Manage platform access, roles, and status.
+          </p>
         </div>
-        <nav className="um-nav">
-          {NAV_ITEMS.map((item) => {
-            const active = item.label === "Settings";
+
+        <button
+          type="button"
+          className="flex w-full items-center justify-center gap-[8px] rounded-[8px] bg-[#005c55] px-[16px] py-[10px] text-[14px] font-semibold text-white hover:bg-[#00473f]"
+        >
+          <svg className="size-[16px]" viewBox="0 0 16 16" fill="none">
+            <path d="M8 3v10M3 8h10" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+          Add New User
+        </button>
+
+        <div className="relative">
+          <svg
+            className="pointer-events-none absolute left-[12px] top-1/2 size-[16px] -translate-y-1/2 text-[#9ca3af]"
+            viewBox="0 0 20 20"
+            fill="none"
+          >
+            <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.6" />
+            <path d="M17 17l-3.5-3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          </svg>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search users by name or email..."
+            className="w-full rounded-[9999px] border border-[#bdc9c6] bg-[#f9f9ff] py-[10px] pl-[36px] pr-[14px] text-[14px] text-[#111c2d] outline-none placeholder:text-[#9ca3af] focus:border-[#005c55] focus:ring-1 focus:ring-[#005c55]"
+          />
+        </div>
+
+        <div className="flex w-full gap-[8px] overflow-x-auto pb-[2px]">
+          {FILTER_CHIPS.map((chip) => {
+            const isActive = activeChip === chip;
             return (
-              <div key={item.label} className={`um-nav-item ${active ? "active" : ""}`}>
-                <Icon name={item.icon} />
-                <span>{item.label}</span>
-              </div>
+              <button
+                key={chip}
+                type="button"
+                onClick={() => setActiveChip(chip)}
+                className={`shrink-0 rounded-full border px-[14px] py-[6px] text-[13px] font-medium transition-colors ${
+                  isActive
+                    ? 'border-[#005c55] bg-[#005c55] text-white'
+                    : 'border-[#bdc9c6] bg-white text-[#3e4947] hover:bg-[#f9f9ff]'
+                }`}
+              >
+                {chip}
+              </button>
             );
           })}
-        </nav>
-      </aside>
+        </div>
 
-      <div className="um-main-col">
-        <header className="um-header">
-          <button className="um-menu-btn" onClick={() => setMenuOpen(true)}>
-            <Icon name="menu" size={20} />
+        <div className="flex flex-col gap-[12px]">
+          {filteredUsers.map((user) => (
+            <div
+              key={user.id}
+              className="flex items-start justify-between gap-[12px] rounded-[12px] border border-[#bdc9c6] bg-white p-[14px]"
+            >
+              <div className="flex items-start gap-[12px]">
+                <Avatar user={user} />
+                <div className="flex flex-col gap-[4px]">
+                  <span className="text-[14px] font-semibold leading-[18px] text-[#111c2d]">
+                    {user.name}
+                  </span>
+                  <span className="text-[12px] leading-[16px] text-[#3e4947]">{user.email}</span>
+                  <div className="flex items-center gap-[8px] pt-[2px]">
+                    <RoleBadge role={user.role} />
+                    <StatusBadge status={user.status} />
+                  </div>
+                </div>
+              </div>
+              <KebabMenu />
+            </div>
+          ))}
+          {filteredUsers.length === 0 && (
+            <div className="rounded-[12px] border border-[#bdc9c6] bg-white p-[24px] text-center text-[13px] text-[#3e4947]">
+              No users match this filter.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ===== Desktop / tablet layout ===== */}
+      <div className="hidden w-full max-w-[1280px] flex-col items-start gap-[24px] lg:flex">
+        <div className="flex w-full items-start justify-between gap-4">
+          <div className="flex flex-col gap-[8px]">
+            <h1 className="text-[36px] font-bold leading-[44px] tracking-[-0.72px] text-[#111c2d]">
+              User Management
+            </h1>
+            <p className="text-[16px] leading-[24px] text-[#3e4947]">
+              Manage students, instructors, and administrative accounts.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="flex shrink-0 items-center gap-[8px] rounded-[8px] bg-[#005c55] px-[20px] py-[10px] text-[14px] font-semibold text-white drop-shadow-[0px_1px_1px_rgba(0,0,0,0.05)] hover:bg-[#00473f]"
+          >
+            <svg className="size-[16px]" viewBox="0 0 16 16" fill="none">
+              <path d="M8 3v10M3 8h10" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+            Add New User
           </button>
-          <div className="um-search-wrap">
-            <span className="um-search-icon"><Icon name="search" /></span>
-            <input className="um-search-input" placeholder="Search accounts..." />
-          </div>
-          <div className="um-header-icons">
-            <Icon name="bell" size={18} />
-            <Icon name="apps" size={18} />
-            <img className="um-avatar-sm" src={imgUserProfile} alt="User profile" />
-          </div>
-        </header>
+        </div>
 
-        <main className="um-main">
-          <div className="um-top-row">
-            <div>
-              <h1 className="um-h1">User Management</h1>
-              <p className="um-subtitle">Manage students, instructors, and administrative accounts.</p>
+        <div className="flex w-full flex-col overflow-hidden rounded-[12px] border border-[#bdc9c6] bg-white shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]">
+          {/* Filters */}
+          <div className="flex w-full flex-wrap items-center gap-[12px] border-b border-[#bdc9c6] p-[16px]">
+            <div className="relative min-w-[220px] flex-1">
+              <svg
+                className="pointer-events-none absolute left-[12px] top-1/2 size-[16px] -translate-y-1/2 text-[#9ca3af]"
+                viewBox="0 0 20 20"
+                fill="none"
+              >
+                <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.6" />
+                <path d="M17 17l-3.5-3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Filter by name or email"
+                className="w-full rounded-[8px] border border-[#bdc9c6] bg-[#f9f9ff] py-[9px] pl-[36px] pr-[12px] text-[14px] text-[#111c2d] outline-none placeholder:text-[#9ca3af] focus:border-[#005c55] focus:ring-1 focus:ring-[#005c55]"
+              />
             </div>
-            <button className="um-add-btn"><Icon name="plus" size={16} /> Add New User</button>
-          </div>
 
-          <div className="um-filter-bar">
-            <div className="um-filter-search">
-              <span className="um-filter-icon-abs"><Icon name="search" size={14} /></span>
-              <input className="um-filter-input" placeholder="Filter by name or email" />
-            </div>
-            <select className="um-select" defaultValue="All Roles">
+            <select className="rounded-[8px] border border-[#bdc9c6] bg-white px-[12px] py-[9px] text-[14px] text-[#3e4947] outline-none focus:border-[#005c55]">
               <option>All Roles</option>
               <option>Student</option>
               <option>Instructor</option>
               <option>Admin</option>
             </select>
-            <select className="um-select" defaultValue="Status">
+
+            <select className="rounded-[8px] border border-[#bdc9c6] bg-white px-[12px] py-[9px] text-[14px] text-[#3e4947] outline-none focus:border-[#005c55]">
               <option>Status</option>
               <option>Active</option>
               <option>Inactive</option>
+              <option>Pending</option>
+              <option>Offline</option>
             </select>
-            <button className="um-icon-btn"><Icon name="filter" size={16} /></button>
-            <button className="um-icon-btn"><Icon name="download" size={16} /></button>
+
+            <button
+              type="button"
+              className="rounded-[8px] border border-[#bdc9c6] p-[9px] text-[#3e4947] hover:bg-[#f9f9ff]"
+              aria-label="Sort"
+            >
+              <svg className="size-[16px]" viewBox="0 0 16 16" fill="none">
+                <path d="M4 4h8M4 8h5M4 12h2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className="rounded-[8px] border border-[#bdc9c6] p-[9px] text-[#3e4947] hover:bg-[#f9f9ff]"
+              aria-label="Export"
+            >
+              <svg className="size-[16px]" viewBox="0 0 16 16" fill="none">
+                <path d="M8 2v8m0 0L5 7m3 3l3-3M3 13h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
           </div>
 
-          <div className="um-table-card">
-            <div className="um-table-scroll">
-              <table className="um-table">
-                <thead>
-                  <tr>
-                    <th style={{ width: 32 }}></th>
-                    <th>User</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                    <th>Last Login</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {USERS.map((u) => (
-                    <tr key={u.name}>
-                      <td>
-                        <input
-                          type="checkbox"
-                          className="um-checkbox"
-                          checked={!!checked[u.name]}
-                          onChange={() => toggleRow(u.name)}
-                        />
-                      </td>
-                      <td>
-                        <div className="um-user-cell">
-                          <div className="um-user-avatar">{u.initials}</div>
-                          <div>
-                            <p className="um-user-name">{u.name}</p>
-                            <p className="um-user-email">{u.email}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td><span className={`um-role-pill ${u.role === "Admin" ? "admin" : ""}`}>{u.role}</span></td>
-                      <td>
-                        <span className={`um-status ${u.status === "Active" ? "active" : "inactive"}`}>
-                          <span className="um-status-dot" />
-                          {u.status}
+          {/* Table */}
+          <table className="w-full border-collapse text-left">
+            <thead>
+              <tr className="border-b border-[#bdc9c6] bg-[#f9f9ff]">
+                <th className="w-[44px] px-[16px] py-[12px]">
+                  <input
+                    type="checkbox"
+                    checked={selected.length === filteredUsers.length && filteredUsers.length > 0}
+                    onChange={toggleSelectAll}
+                    className="size-[16px] accent-[#005c55]"
+                  />
+                </th>
+                <th className="px-[12px] py-[12px] text-[11px] font-semibold uppercase tracking-[0.6px] text-[#3e4947]">
+                  User
+                </th>
+                <th className="px-[12px] py-[12px] text-[11px] font-semibold uppercase tracking-[0.6px] text-[#3e4947]">
+                  Role
+                </th>
+                <th className="px-[12px] py-[12px] text-[11px] font-semibold uppercase tracking-[0.6px] text-[#3e4947]">
+                  Status
+                </th>
+                <th className="px-[12px] py-[12px] text-[11px] font-semibold uppercase tracking-[0.6px] text-[#3e4947]">
+                  Last Login
+                </th>
+                <th className="px-[16px] py-[12px] text-right text-[11px] font-semibold uppercase tracking-[0.6px] text-[#3e4947]">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredUsers.map((user) => (
+                <tr key={user.id} className="border-b border-[#e5e7eb] last:border-b-0 hover:bg-[#f9f9ff]">
+                  <td className="px-[16px] py-[14px]">
+                    <input
+                      type="checkbox"
+                      checked={selected.includes(user.id)}
+                      onChange={() => toggleSelected(user.id)}
+                      className="size-[16px] accent-[#005c55]"
+                    />
+                  </td>
+                  <td className="px-[12px] py-[14px]">
+                    <div className="flex items-center gap-[12px]">
+                      <Avatar user={user} />
+                      <div className="flex flex-col">
+                        <span className="text-[14px] font-semibold leading-[18px] text-[#111c2d]">
+                          {user.name}
                         </span>
-                      </td>
-                      <td>{u.lastLogin}</td>
-                      <td>
-                        <div className="um-actions-cell">
-                          <button className="um-row-btn"><Icon name="edit" size={15} /></button>
-                          <button className="um-row-btn"><Icon name="dots" size={15} /></button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="um-table-footer">
-              <span>Showing 1 to 4 of 124 users</span>
-              <div className="um-pagination">
-                <button className="um-page-btn"><Icon name="chevron-left" size={14} /></button>
-                <button className="um-page-btn active">1</button>
-                <button className="um-page-btn"><Icon name="chevron-right" size={14} /></button>
-              </div>
+                        <span className="text-[12px] leading-[16px] text-[#3e4947]">{user.email}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-[12px] py-[14px]">
+                    <RoleBadge role={user.role} />
+                  </td>
+                  <td className="px-[12px] py-[14px]">
+                    <StatusBadge status={user.status} />
+                  </td>
+                  <td className="px-[12px] py-[14px] text-[14px] text-[#3e4947]">{user.lastLogin}</td>
+                  <td className="px-[16px] py-[14px]">
+                    <div className="flex items-center justify-end gap-[8px]">
+                      <button
+                        type="button"
+                        className="rounded-[6px] p-[6px] text-[#3e4947] hover:bg-[#e7eeff] hover:text-[#005c55]"
+                        aria-label="Edit user"
+                      >
+                        <svg className="size-[16px]" viewBox="0 0 16 16" fill="none">
+                          <path
+                            d="M11 2l3 3-8 8H3v-3l8-8z"
+                            stroke="currentColor"
+                            strokeWidth="1.4"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                      <KebabMenu />
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {filteredUsers.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-[16px] py-[32px] text-center text-[14px] text-[#3e4947]">
+                    No users match this filter.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+
+          {/* Pagination */}
+          <div className="flex w-full items-center justify-between border-t border-[#bdc9c6] px-[16px] py-[12px]">
+            <span className="text-[13px] text-[#3e4947]">
+              Showing 1 to {filteredUsers.length} of 124 users
+            </span>
+            <div className="flex items-center gap-[6px]">
+              <button
+                type="button"
+                className="rounded-[6px] border border-[#bdc9c6] p-[6px] text-[#3e4947] hover:bg-[#f9f9ff] disabled:opacity-40"
+                aria-label="Previous page"
+                disabled
+              >
+                <svg className="size-[14px]" viewBox="0 0 16 16" fill="none">
+                  <path d="M10 3L6 8l4 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className="rounded-[6px] border border-[#bdc9c6] p-[6px] text-[#3e4947] hover:bg-[#f9f9ff]"
+                aria-label="Next page"
+              >
+                <svg className="size-[14px]" viewBox="0 0 16 16" fill="none">
+                  <path d="M6 3l4 5-4 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
             </div>
           </div>
-        </main>
+        </div>
       </div>
     </div>
   );
 }
+
+
+

@@ -1,504 +1,617 @@
-import { useState } from "react";
+import AppLayout from '../components/AppLayout';
 
-const imgUserProfile = "https://www.figma.com/api/mcp/asset/85366406-af28-409f-9953-d29e020f2975";
-const imgStudentPhoto = "https://www.figma.com/api/mcp/asset/1fd3aab2-d1b3-4240-9352-ec129b496a46";
+import { useState } from 'react';
 
-const NAV_ITEMS = [
-  { label: "Dashboard", icon: "grid" },
-  { label: "My Courses", icon: "book" },
-  { label: "Grades", icon: "star" },
-  { label: "Schedule", icon: "calendar" },
-  { label: "Notifications", icon: "bell" },
-  { label: "Settings", icon: "gear" },
+const imgStudentPhoto = 'https://i.pravatar.cc/256?img=47';
+
+const TABS = [
+  { id: 'personal', label: 'Personal Info' },
+  { id: 'security', label: 'Security' },
+  { id: 'notifications', label: 'Notifications' },
+  { id: 'appearance', label: 'Appearance' },
 ];
 
-const TABS = ["Personal Info", "Security", "Notifications", "Appearance"];
-
-function Icon({ name, size = 18 }) {
-  const common = { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" };
-  switch (name) {
-    case "grid":
-      return (<svg {...common}><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></svg>);
-    case "book":
-      return (<svg {...common}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></svg>);
-    case "star":
-      return (<svg {...common}><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9 12 2" /></svg>);
-    case "calendar":
-      return (<svg {...common}><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>);
-    case "bell":
-      return (<svg {...common}><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>);
-    case "gear":
-      return (<svg {...common}><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>);
-    case "search":
-      return (<svg {...common}><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>);
-    case "apps":
-      return (<svg {...common}><circle cx="5" cy="5" r="1.5" /><circle cx="12" cy="5" r="1.5" /><circle cx="19" cy="5" r="1.5" /><circle cx="5" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="19" cy="12" r="1.5" /><circle cx="5" cy="19" r="1.5" /><circle cx="12" cy="19" r="1.5" /><circle cx="19" cy="19" r="1.5" /></svg>);
-    case "chevron":
-      return (<svg {...common}><polyline points="9 18 15 12 9 6" /></svg>);
-    case "menu":
-      return (<svg {...common}><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>);
-    case "close":
-      return (<svg {...common}><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>);
-    case "user":
-      return (<svg {...common}><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" /></svg>);
-    case "lock":
-      return (<svg {...common}><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>);
-    case "check":
-      return (<svg {...common}><polyline points="20 6 9 17 4 12" /></svg>);
-    default:
-      return null;
-  }
-}
-
-function Toggle({ checked, onChange }) {
+function ChevronRight({ active }) {
   return (
-    <button
-      type="button"
-      onClick={() => onChange(!checked)}
-      className={`ps-toggle ${checked ? "on" : ""}`}
-      aria-pressed={checked}
+    <svg
+      className="h-[9px] w-[5.55px] shrink-0"
+      viewBox="0 0 6 9"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
     >
-      <span className="ps-toggle-knob" />
-    </button>
+      <path
+        d="M1 1L5 4.5L1 8"
+        stroke={active ? '#005c55' : '#3e4947'}
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
-export default function Profile() {
-  const [activeTab, setActiveTab] = useState("Personal Info");
-  const [firstName, setFirstName] = useState("Alex");
-  const [lastName, setLastName] = useState("Johnson");
-  const [personalEmail, setPersonalEmail] = useState("alexj@example.com");
-  const [phone, setPhone] = useState("+1 (555) 123-4567");
-  const [twoFactor, setTwoFactor] = useState(true);
-  const [courseAnnouncements, setCourseAnnouncements] = useState(true);
-  const [gradeUpdates, setGradeUpdates] = useState(true);
-  const [assignmentDeadlines, setAssignmentDeadlines] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+function Toggle({ checked, onChange, label, description }) {
+  return (
+    <div className="flex w-full items-center justify-between gap-4 py-[14px]">
+      <div className="flex flex-col items-start gap-[2px]">
+        <span className="text-[14px] font-medium leading-[20px] text-[#111c2d]">{label}</span>
+        {description && (
+          <span className="text-[12px] leading-[16px] text-[#3e4947]">{description}</span>
+        )}
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={onChange}
+        className={`relative h-[24px] w-[42px] shrink-0 rounded-full transition-colors ${
+          checked ? 'bg-[#005c55]' : 'bg-[#bdc9c6]'
+        }`}
+      >
+        <span
+          className={`absolute top-[2px] h-[20px] w-[20px] rounded-full bg-white shadow transition-transform ${
+            checked ? 'translate-x-[20px]' : 'translate-x-[2px]'
+          }`}
+        />
+      </button>
+    </div>
+  );
+}
 
-  function handleSave() {
+export default function ProfileSettings() {
+  const [activeTab, setActiveTab] = useState('personal');
+  const [formData, setFormData] = useState({
+    firstName: 'Sarah',
+    lastName: 'Jenkins',
+    email: 's.jenkins@eduportal.edu',
+    phone: '+1 (555) 123-4567',
+  });
+  const [saved, setSaved] = useState(false);
+
+  const [passwordForm, setPasswordForm] = useState({
+    current: '',
+    next: '',
+    confirm: '',
+  });
+  const [twoFactor, setTwoFactor] = useState(false);
+  const [securitySaved, setSecuritySaved] = useState(false);
+
+  const [notifications, setNotifications] = useState({
+    grades: true,
+    announcements: true,
+    schedule: false,
+    marketing: false,
+  });
+
+  const handleChange = (field) => (e) => {
+    setFormData((prev) => ({ ...prev, [field]: e.target.value }));
+    setSaved(false);
+  };
+
+  const handleSave = (e) => {
+    e.preventDefault();
+    // TODO: استبدلها بنداء الـ API بتاعك لتحديث بيانات المستخدم
     setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  }
+  };
+
+  const handlePasswordChange = (field) => (e) => {
+    setPasswordForm((prev) => ({ ...prev, [field]: e.target.value }));
+    setSecuritySaved(false);
+  };
+
+  const handleSecuritySave = (e) => {
+    e.preventDefault();
+    // TODO: استبدلها بنداء الـ API بتاعك لتحديث كلمة السر / الـ 2FA
+    setSecuritySaved(true);
+    setPasswordForm({ current: '', next: '', confirm: '' });
+  };
+
+  const toggleNotification = (key) => () => {
+    setNotifications((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const [mobileFormData, setMobileFormData] = useState({
+    firstName: 'Alex',
+    lastName: 'Johnson',
+    universityEmail: 'a.johnson@eduportal.edu',
+    personalEmail: 'alexj.doe@example.com',
+    phone: '+1 (555) 123-4567',
+  });
+  const [mobileTwoFactor, setMobileTwoFactor] = useState(true);
+  const [mobileNotifications, setMobileNotifications] = useState({
+    courseAnnouncements: true,
+    gradeUpdates: true,
+    assignmentDeadline: false,
+  });
+
+  const handleMobileChange = (field) => (e) => {
+    setMobileFormData((prev) => ({ ...prev, [field]: e.target.value }));
+  };
+
+  const toggleMobileNotification = (key) => () => {
+    setMobileNotifications((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
   return (
-    <div className="ps-page">
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    <div className="w-full">
+      {/* ===== Mobile layout (stacked, single scroll) ===== */}
+      <div className="mx-auto flex w-full max-w-[400px] flex-col items-center gap-[20px] px-4 py-6 lg:hidden">
+        {/* Avatar + name */}
+        <div className="flex flex-col items-center gap-[6px] text-center">
+          <img
+            src={imgStudentPhoto}
+            alt="Alex Johnson"
+            className="size-[72px] rounded-full border-4 border-[#f9f9ff] object-cover shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]"
+          />
+          <h1 className="text-[18px] font-bold leading-[24px] text-[#111c2d]">Alex Johnson</h1>
+          <p className="text-[13px] leading-[18px] text-[#3e4947]">Computer Science, Year 3</p>
+          <span className="mt-[2px] inline-flex items-center gap-[6px] rounded-full border border-[#bfded9] bg-[#e6f4f1] px-[10px] py-[4px] text-[12px] font-semibold text-[#005c55]">
+            <svg className="size-[12px]" viewBox="0 0 16 16" fill="none">
+              <path d="M3 8.5L6.5 12L13 4.5" stroke="#005c55" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Enrolled Full-Time
+          </span>
+        </div>
 
-        .ps-page { display: flex; min-height: 100vh; background: #F9F9FF; font-family: 'Inter', Arial, sans-serif; }
-        .ps-desktop-only { display: flex; }
-        .ps-mobile-only { display: none; }
-
-        /* ===== Desktop / tablet ===== */
-        .ps-sidebar { width: 260px; background: #fff; border-right: 1px solid #BDC9C6; display: flex; flex-direction: column; flex-shrink: 0; }
-        .ps-logo-row { display: flex; align-items: center; gap: 16px; padding: 24px; }
-        .ps-logo-box { width: 40px; height: 40px; border-radius: 8px; background: #005C55; flex-shrink: 0; }
-        .ps-brand { color: #005C55; font-weight: 700; font-size: 24px; line-height: 32px; margin: 0; }
-        .ps-brand-sub { color: #3E4947; font-weight: 600; font-size: 12px; margin: 0; }
-        .ps-nav { padding: 16px 12px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
-        .ps-nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; color: #3E4947; border-left: 4px solid transparent; cursor: pointer; }
-        .ps-nav-item.active { font-weight: 700; color: #005C55; background: rgba(0,92,85,0.1); border-left: 4px solid #005C55; padding-left: 12px; }
-        .ps-close-btn { display: none; }
-
-        .ps-main-col { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-        .ps-header { height: 64px; border-bottom: 1px solid #BDC9C6; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; background: rgba(249,249,255,0.8); backdrop-filter: blur(6px); gap: 24px; }
-        .ps-menu-btn { display: none; background: none; border: none; color: #3E4947; cursor: pointer; }
-        .ps-search-wrap { position: relative; flex: 1 0 0; min-width: 0; }
-        .ps-search-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: #6B7280; }
-        .ps-search-input { width: 100%; box-sizing: border-box; padding: 11px 16px 11px 40px; border-radius: 9999px; border: 1px solid #BDC9C6; background: #F0F3FF; font-size: 16px; color: #111C2D; outline: none; }
-        .ps-header-icons { display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
-        .ps-icon-btn { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; cursor: pointer; color: #3E4947; }
-        .ps-avatar-sm { width: 32px; height: 32px; border-radius: 50%; border: 1px solid #BDC9C6; object-fit: cover; }
-
-        .ps-main { max-width: 1280px; padding: 16px 24px 40px; width: 100%; box-sizing: border-box; }
-        .ps-h1 { font-size: 36px; font-weight: 700; color: #111C2D; margin: 0; letter-spacing: -0.5px; }
-        .ps-subtitle { color: #3E4947; font-size: 16px; margin: 8px 0 24px; }
-
-        .ps-layout { display: flex; gap: 24px; align-items: flex-start; }
-        .ps-settings-nav { width: 256px; background: #fff; border: 1px solid #BDC9C6; border-radius: 12px; padding: 13px; flex-shrink: 0; box-shadow: 0 1px 1px rgba(0,0,0,0.05); }
-        .ps-settings-tab { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-radius: 8px; margin-bottom: 8px; font-size: 14px; font-weight: 500; color: #3E4947; background: transparent; cursor: pointer; }
-        .ps-settings-tab.active { font-weight: 700; color: #005C55; background: #DEE8FF; }
-
-        .ps-content { flex: 1; display: flex; flex-direction: column; gap: 24px; min-width: 0; }
-        .ps-profile-card { background: #fff; border: 1px solid #BDC9C6; border-radius: 12px; padding: 25px; display: flex; gap: 24px; box-shadow: 0 1px 1px rgba(0,0,0,0.05); }
-        .ps-photo { width: 128px; height: 128px; border-radius: 50%; border: 4px solid #F9F9FF; flex-shrink: 0; object-fit: cover; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .ps-name { font-size: 24px; font-weight: 700; color: #111C2D; margin: 0; }
-        .ps-major { color: #005C55; font-size: 16px; margin: 8px 0; }
-        .ps-badge-row { display: flex; gap: 16px; margin-top: 8px; flex-wrap: wrap; }
-        .ps-badge { background: #E7EEFF; border: 1px solid #BDC9C6; border-radius: 8px; padding: 9px 17px; }
-        .ps-badge-label { font-size: 12px; font-weight: 600; color: #3E4947; text-transform: uppercase; letter-spacing: 0.5px; margin: 0; }
-        .ps-badge-value { font-size: 16px; font-weight: 500; color: #111C2D; margin: 0; }
-
-        .ps-form-card { background: #fff; border: 1px solid #BDC9C6; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .ps-form-header { background: #F9F9FF; border-bottom: 1px solid #BDC9C6; padding: 16px 24px 17px; }
-        .ps-form-title { font-size: 20px; font-weight: 600; color: #111C2D; margin: 0; }
-        .ps-form-desc { font-size: 12px; font-weight: 600; color: #3E4947; margin: 4px 0 0; }
-        .ps-form-grid { padding: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        .ps-col-span-2 { grid-column: 1 / span 2; }
-        .ps-label { font-size: 14px; font-weight: 500; color: #3E4947; display: block; margin-bottom: 8px; }
-        .ps-input { width: 100%; box-sizing: border-box; padding: 9px 13px; border-radius: 6px; border: 1px solid #BDC9C6; background: #F9F9FF; font-size: 16px; color: #111C2D; outline: none; }
-        .ps-email-box { padding: 9px 13px; border-radius: 6px; border: 1px solid #BDC9C6; background: #E7EEFF; color: #3E4947; font-size: 16px; opacity: 0.7; }
-        .ps-hint { font-size: 12px; font-weight: 600; color: #3E4947; margin: 4px 0 0; }
-        .ps-form-footer { background: #F9F9FF; border-top: 1px solid #BDC9C6; padding: 17px 24px 16px; display: flex; justify-content: flex-end; align-items: center; gap: 12px; }
-        .ps-saved-text { font-size: 13px; color: #005C55; font-weight: 500; }
-        .ps-save-btn { background: #005C55; color: #fff; border: none; border-radius: 8px; padding: 8px 24px; font-size: 14px; font-weight: 500; cursor: pointer; }
-        .ps-placeholder-card { background: #fff; border: 1px solid #BDC9C6; border-radius: 12px; padding: 40px; text-align: center; color: #3E4947; font-size: 14px; }
-
-        .ps-overlay { display: none; }
-
-        .ps-toggle { width: 40px; height: 22px; border-radius: 9999px; background: #BDC9C6; border: none; position: relative; cursor: pointer; padding: 0; flex-shrink: 0; transition: background 0.15s ease; }
-        .ps-toggle.on { background: #10B981; }
-        .ps-toggle-knob { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform 0.15s ease; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
-        .ps-toggle.on .ps-toggle-knob { transform: translateX(18px); }
-
-        /* ===== Mobile (matches "Setting (mobile web)-revised" Figma frame) ===== */
-        @media (max-width: 640px) {
-          .ps-desktop-only { display: none; }
-          .ps-mobile-only { display: flex; }
-
-          .ps-m-page { display: flex; flex-direction: column; width: 100%; min-height: 100vh; background: #F9F9FF; }
-
-          .ps-m-header { display: flex; align-items: center; justify-content: space-between; height: 56px; padding: 0 16px; background: #fff; border-bottom: 1px solid #BDC9C6; position: fixed; top: 0; left: 0; right: 0; width: 100%; box-sizing: border-box; z-index: 100; }
-          .ps-m-brand { display: flex; align-items: center; gap: 10px; color: #3E4947; }
-          .ps-m-brand-text { color: #005C55; font-weight: 700; font-size: 17px; }
-          .ps-m-header-icons { display: flex; align-items: center; gap: 14px; color: #3E4947; }
-          .ps-m-avatar { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; border: 1px solid #BDC9C6; }
-        .ps-m-menu-btn { background: none; border: none; padding: 0; margin: 0; color: #3E4947; display: flex; align-items: center; cursor: pointer; outline: none; }
-        .ps-m-header, .ps-m-header * { outline: none; box-shadow: none; }
-
-          .ps-m-overlay { display: none; }
-          .ps-m-overlay.open { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 40; }
-          .ps-m-drawer { position: fixed; top: 0; left: 0; bottom: 0; width: 240px; background: #fff; z-index: 50; transform: translateX(-100%); transition: transform 0.2s ease; box-shadow: 2px 0 12px rgba(0,0,0,0.15); display: flex; flex-direction: column; }
-          .ps-m-drawer.open { transform: translateX(0); }
-          .ps-m-drawer-header { display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid #BDC9C6; }
-          .ps-m-drawer-nav { padding: 12px; display: flex; flex-direction: column; gap: 4px; }
-
-          .ps-m-main { margin-top: 56px; padding: 12px 16px 16px; display: flex; flex-direction: column; gap: 16px; }
-          .ps-m-h1 { font-size: 22px; font-weight: 700; color: #111C2D; margin: 0; }
-          .ps-m-subtitle { font-size: 13px; color: #3E4947; margin: 4px 0 0; }
-
-          .ps-m-profile-card { background: #fff; border: 1px solid #BDC9C6; border-radius: 12px; padding: 20px 16px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; }
-          .ps-m-photo { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 3px solid #F9F9FF; margin-bottom: 8px; }
-          .ps-m-name { font-size: 18px; font-weight: 700; color: #111C2D; margin: 0; }
-          .ps-m-major { font-size: 13px; color: #3E4947; margin: 0; }
-          .ps-m-status-pill { display: inline-flex; align-items: center; gap: 6px; background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0; border-radius: 9999px; padding: 4px 12px; font-size: 12px; font-weight: 600; margin-top: 10px; }
-          .ps-m-status-dot { width: 6px; height: 6px; border-radius: 50%; background: #10B981; }
-
-          .ps-m-academic-card { background: #fff; border: 1px solid #BDC9C6; border-radius: 12px; padding: 16px; }
-          .ps-m-academic-title { font-size: 11px; font-weight: 700; letter-spacing: 0.6px; color: #3E4947; text-transform: uppercase; margin: 0 0 12px; }
-          .ps-m-academic-row { display: flex; justify-content: space-between; padding: 8px 0; border-top: 1px solid #EEF1F0; font-size: 13px; }
-          .ps-m-academic-row:first-of-type { border-top: none; }
-          .ps-m-academic-label { color: #3E4947; }
-          .ps-m-academic-value { color: #111C2D; font-weight: 600; }
-
-          .ps-m-section-card { background: #fff; border: 1px solid #BDC9C6; border-radius: 12px; overflow: hidden; }
-          .ps-m-section-header { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid #EEF1F0; color: #005C55; }
-          .ps-m-section-title { font-size: 15px; font-weight: 700; color: #111C2D; margin: 0; }
-          .ps-m-section-body { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
-
-          .ps-m-field-label { font-size: 12px; font-weight: 600; color: #3E4947; display: block; margin-bottom: 6px; }
-          .ps-m-input { width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 6px; border: 1px solid #BDC9C6; background: #F9F9FF; font-size: 14px; color: #111C2D; outline: none; }
-          .ps-m-input.readonly { background: #E7EEFF; color: #3E4947; opacity: 0.75; }
-          .ps-m-field-hint { font-size: 11px; color: #3E4947; margin: 4px 0 0; }
-
-          .ps-m-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-          .ps-m-row-title { font-size: 14px; font-weight: 600; color: #111C2D; margin: 0; }
-          .ps-m-row-sub { font-size: 12px; color: #3E4947; margin: 2px 0 0; }
-          .ps-m-divider { height: 1px; background: #EEF1F0; margin: 2px 0; }
-          .ps-m-update-btn { background: #F9F9FF; border: 1px solid #BDC9C6; color: #111C2D; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
-
-          .ps-m-actions { display: flex; gap: 12px; padding-bottom: 24px; }
-          .ps-m-cancel-btn { flex: 1; background: #fff; border: 1px solid #BDC9C6; color: #3E4947; border-radius: 8px; padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; }
-          .ps-m-save-btn { flex: 1; background: #005C55; border: none; color: #fff; border-radius: 8px; padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; }
-          .ps-m-saved-banner { background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0; border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: 600; text-align: center; }
-        }
-
-        @media (min-width: 641px) and (max-width: 900px) {
-          .ps-layout { flex-direction: column; }
-          .ps-settings-nav { width: 100%; box-sizing: border-box; display: flex; gap: 8px; overflow-x: auto; padding: 8px; }
-          .ps-settings-tab { flex-shrink: 0; margin-bottom: 0; }
-        }
-      `}</style>
-
-      {/* ===================== DESKTOP / TABLET LAYOUT ===================== */}
-      <div className="ps-desktop-only" style={{ width: "100%" }}>
-        <div className={`ps-overlay ${menuOpen ? "open" : ""}`} onClick={() => setMenuOpen(false)} />
-
-        <aside className="ps-sidebar">
-          <div className="ps-logo-row">
-            <div className="ps-logo-box" />
-            <div>
-              <p className="ps-brand">EduPortal</p>
-              <p className="ps-brand-sub">Student Management</p>
+        {/* Academic Status */}
+        <div className="w-full rounded-[12px] border border-[#bdc9c6] bg-white p-[16px]">
+          <h3 className="mb-[10px] text-[11px] font-bold uppercase tracking-[0.6px] text-[#3e4947]">
+            Academic Status
+          </h3>
+          <div className="flex flex-col divide-y divide-[#e5e7eb]">
+            <div className="flex items-center justify-between py-[8px] text-[13px]">
+              <span className="text-[#3e4947]">Student ID</span>
+              <span className="font-semibold text-[#111c2d]">V0393047</span>
+            </div>
+            <div className="flex items-center justify-between py-[8px] text-[13px]">
+              <span className="text-[#3e4947]">Current GPA</span>
+              <span className="font-semibold text-[#111c2d]">3.0</span>
+            </div>
+            <div className="flex items-center justify-between py-[8px] text-[13px]">
+              <span className="text-[#3e4947]">Expected Grad</span>
+              <span className="font-semibold text-[#111c2d]">May 2026</span>
             </div>
           </div>
-          <nav className="ps-nav">
-            {NAV_ITEMS.map((item) => {
-              const active = item.label === "Settings";
-              return (
-                <div key={item.label} className={`ps-nav-item ${active ? "active" : ""}`}>
-                  <Icon name={item.icon} />
-                  <span>{item.label}</span>
-                </div>
-              );
-            })}
-          </nav>
-        </aside>
+        </div>
 
-        <div className="ps-main-col">
-          <header className="ps-header">
-            <div className="ps-search-wrap">
-              <span className="ps-search-icon"><Icon name="search" /></span>
-              <input className="ps-search-input" placeholder="Search..." />
+        {/* Personal Information */}
+        <div className="w-full rounded-[12px] border border-[#bdc9c6] bg-white p-[16px]">
+          <div className="mb-[12px] flex items-center gap-[8px]">
+            <svg className="size-[16px] shrink-0" viewBox="0 0 20 20" fill="none">
+              <path d="M10 10a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM4 17c0-3 2.7-5 6-5s6 2 6 5" stroke="#005c55" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <h3 className="text-[15px] font-semibold text-[#111c2d]">Personal Information</h3>
+          </div>
+          <div className="flex flex-col gap-[12px]">
+            <div className="flex flex-col gap-[4px]">
+              <label className="text-[12px] font-medium text-[#3e4947]">First Name</label>
+              <input
+                type="text"
+                value={mobileFormData.firstName}
+                onChange={handleMobileChange('firstName')}
+                className="w-full rounded-[6px] border border-[#bdc9c6] bg-[#f9f9ff] px-[12px] py-[8px] text-[14px] text-[#111c2d] outline-none focus:border-[#005c55] focus:ring-1 focus:ring-[#005c55]"
+              />
             </div>
-            <div className="ps-header-icons">
-              <span className="ps-icon-btn"><Icon name="bell" /></span>
-              <span className="ps-icon-btn"><Icon name="apps" /></span>
-              <img className="ps-avatar-sm" src={imgUserProfile} alt="User profile" />
+            <div className="flex flex-col gap-[4px]">
+              <label className="text-[12px] font-medium text-[#3e4947]">Last Name</label>
+              <input
+                type="text"
+                value={mobileFormData.lastName}
+                onChange={handleMobileChange('lastName')}
+                className="w-full rounded-[6px] border border-[#bdc9c6] bg-[#f9f9ff] px-[12px] py-[8px] text-[14px] text-[#111c2d] outline-none focus:border-[#005c55] focus:ring-1 focus:ring-[#005c55]"
+              />
             </div>
-          </header>
-
-          <main className="ps-main">
-            <h1 className="ps-h1">Profile & Settings</h1>
-            <p className="ps-subtitle">Manage your account preferences and personal information.</p>
-
-            <div className="ps-layout">
-              <div className="ps-settings-nav">
-                {TABS.map((tab) => (
-                  <div key={tab} className={`ps-settings-tab ${tab === activeTab ? "active" : ""}`} onClick={() => setActiveTab(tab)}>
-                    <span>{tab}</span>
-                    <Icon name="chevron" size={12} />
-                  </div>
-                ))}
-              </div>
-
-              <div className="ps-content">
-                <div className="ps-profile-card">
-                  <img className="ps-photo" src={imgStudentPhoto} alt="Student" />
-                  <div>
-                    <h2 className="ps-name">{firstName} {lastName}</h2>
-                    <p className="ps-major">Computer Science, Year 3</p>
-                    <div className="ps-badge-row">
-                      <div className="ps-badge">
-                        <p className="ps-badge-label">Student ID</p>
-                        <p className="ps-badge-value">10283847</p>
-                      </div>
-                      <div className="ps-badge">
-                        <p className="ps-badge-label">Current GPA</p>
-                        <p className="ps-badge-value">3.8</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {activeTab === "Personal Info" && (
-                  <div className="ps-form-card">
-                    <div className="ps-form-header">
-                      <p className="ps-form-title">Personal Information</p>
-                      <p className="ps-form-desc">Update your contact details and bio.</p>
-                    </div>
-                    <div className="ps-form-grid">
-                      <div>
-                        <label className="ps-label">First name</label>
-                        <input className="ps-input" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-                      </div>
-                      <div>
-                        <label className="ps-label">Last name</label>
-                        <input className="ps-input" value={lastName} onChange={(e) => setLastName(e.target.value)} />
-                      </div>
-                      <div className="ps-col-span-2">
-                        <label className="ps-label">University email</label>
-                        <div className="ps-email-box">a.johnson@eduportal.edu</div>
-                        <p className="ps-hint">University email cannot be changed here.</p>
-                      </div>
-                      <div>
-                        <label className="ps-label">Personal email</label>
-                        <input className="ps-input" value={personalEmail} onChange={(e) => setPersonalEmail(e.target.value)} />
-                      </div>
-                      <div>
-                        <label className="ps-label">Phone number</label>
-                        <input className="ps-input" value={phone} onChange={(e) => setPhone(e.target.value)} />
-                      </div>
-                    </div>
-                    <div className="ps-form-footer">
-                      {saved && <span className="ps-saved-text">Saved</span>}
-                      <button className="ps-save-btn" onClick={handleSave}>Save changes</button>
-                    </div>
-                  </div>
-                )}
-
-                {activeTab !== "Personal Info" && (
-                  <div className="ps-placeholder-card">{activeTab} settings go here.</div>
-                )}
-              </div>
+            <div className="flex flex-col gap-[4px]">
+              <label className="text-[12px] font-medium text-[#3e4947]">University Email</label>
+              <input
+                type="email"
+                value={mobileFormData.universityEmail}
+                disabled
+                className="w-full cursor-not-allowed rounded-[6px] border border-[#bdc9c6] bg-[#e7eeff] px-[12px] py-[8px] text-[14px] text-[#3e4947] opacity-70"
+              />
+              <p className="text-[11px] text-[#3e4947]">University emails cannot be changed.</p>
             </div>
-          </main>
+            <div className="flex flex-col gap-[4px]">
+              <label className="text-[12px] font-medium text-[#3e4947]">Personal Email</label>
+              <input
+                type="email"
+                value={mobileFormData.personalEmail}
+                onChange={handleMobileChange('personalEmail')}
+                className="w-full rounded-[6px] border border-[#bdc9c6] bg-[#f9f9ff] px-[12px] py-[8px] text-[14px] text-[#111c2d] outline-none focus:border-[#005c55] focus:ring-1 focus:ring-[#005c55]"
+              />
+            </div>
+            <div className="flex flex-col gap-[4px]">
+              <label className="text-[12px] font-medium text-[#3e4947]">Phone Number</label>
+              <input
+                type="tel"
+                value={mobileFormData.phone}
+                onChange={handleMobileChange('phone')}
+                className="w-full rounded-[6px] border border-[#bdc9c6] bg-[#f9f9ff] px-[12px] py-[8px] text-[14px] text-[#111c2d] outline-none focus:border-[#005c55] focus:ring-1 focus:ring-[#005c55]"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Security */}
+        <div className="w-full rounded-[12px] border border-[#bdc9c6] bg-white p-[16px]">
+          <div className="mb-[12px] flex items-center gap-[8px]">
+            <svg className="size-[16px] shrink-0" viewBox="0 0 20 20" fill="none">
+              <rect x="4" y="9" width="12" height="8" rx="2" stroke="#005c55" strokeWidth="1.6" />
+              <path d="M6.5 9V6.5a3.5 3.5 0 017 0V9" stroke="#005c55" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+            <h3 className="text-[15px] font-semibold text-[#111c2d]">Security</h3>
+          </div>
+
+          <div className="flex items-center justify-between border-b border-[#e5e7eb] pb-[14px]">
+            <div className="flex flex-col gap-[2px]">
+              <span className="text-[13px] font-medium text-[#111c2d]">Password</span>
+              <span className="text-[11px] text-[#3e4947]">Last changed 3 months ago</span>
+            </div>
+            <button
+              type="button"
+              className="shrink-0 rounded-[8px] border border-[#005c55] px-[12px] py-[6px] text-[12px] font-semibold text-[#005c55] hover:bg-[#e6f4f1]"
+            >
+              Update Password
+            </button>
+          </div>
+
+          <div className="pt-[14px]">
+            <Toggle
+              checked={mobileTwoFactor}
+              onChange={() => setMobileTwoFactor((prev) => !prev)}
+              label="Two-Factor Authentication"
+              description={
+                mobileTwoFactor ? 'Currently enabled via Authenticator App' : 'Currently disabled'
+              }
+            />
+          </div>
+        </div>
+
+        {/* Notifications */}
+        <div className="w-full rounded-[12px] border border-[#bdc9c6] bg-white p-[16px]">
+          <div className="mb-[4px] flex items-center gap-[8px]">
+            <svg className="size-[16px] shrink-0" viewBox="0 0 20 20" fill="none">
+              <path d="M15 14H5l1.2-1.5V9a3.8 3.8 0 013.5-3.8V4a1 1 0 012 0v1.2A3.8 3.8 0 0115 9v3.5L15 14z" stroke="#005c55" strokeWidth="1.4" strokeLinejoin="round" />
+              <path d="M8.5 16.5a1.5 1.5 0 003 0" stroke="#005c55" strokeWidth="1.4" strokeLinecap="round" />
+            </svg>
+            <h3 className="text-[15px] font-semibold text-[#111c2d]">Notifications</h3>
+          </div>
+          <div className="flex flex-col divide-y divide-[#e5e7eb]">
+            <Toggle
+              checked={mobileNotifications.courseAnnouncements}
+              onChange={toggleMobileNotification('courseAnnouncements')}
+              label="Course Announcements"
+              description="Updates from professors and TAs"
+            />
+            <Toggle
+              checked={mobileNotifications.gradeUpdates}
+              onChange={toggleMobileNotification('gradeUpdates')}
+              label="Grade Updates"
+              description="When new grades are posted"
+            />
+            <Toggle
+              checked={mobileNotifications.assignmentDeadline}
+              onChange={toggleMobileNotification('assignmentDeadline')}
+              label="Assignment Deadline"
+              description="24 hour reminder before due dates"
+            />
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex w-full items-center gap-[12px] pb-[8px] pt-[4px]">
+          <button
+            type="button"
+            className="flex-1 rounded-[8px] border border-[#bdc9c6] bg-white px-[16px] py-[10px] text-[14px] font-semibold text-[#3e4947] hover:bg-[#f9f9ff]"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="flex-1 rounded-[8px] bg-[#005c55] px-[16px] py-[10px] text-[14px] font-semibold text-white hover:bg-[#00473f]"
+          >
+            Save Changes
+          </button>
         </div>
       </div>
 
-      {/* ===================== MOBILE LAYOUT (matches "Setting (mobile web)-revised") ===================== */}
-      <div className="ps-mobile-only ps-m-page">
-        <header className="ps-m-header">
-          <div className="ps-m-brand">
-            <button className="ps-m-menu-btn" onClick={() => setMenuOpen((prev) => !prev)} aria-label="Toggle menu">
-              <Icon name={menuOpen ? "close" : "menu"} size={20} />
-            </button>
-            <span className="ps-m-brand-text">EduPortal</span>
-          </div>
-          <div className="ps-m-header-icons">
-            <Icon name="bell" size={18} />
-            <Icon name="apps" size={18} />
-            <img className="ps-m-avatar" src={imgUserProfile} alt="User profile" />
-          </div>
-        </header>
+      {/* ===== Desktop / tablet layout (tabs) ===== */}
+      <div className="hidden w-full max-w-[1280px] flex-col items-start gap-[24px] lg:flex">
+      {/* Header */}
+      <div className="flex w-full flex-col items-start gap-[8px]">
+        <h1 className="w-full text-[36px] font-bold leading-[44px] tracking-[-0.72px] text-[#111c2d]">
+          Profile &amp; Settings
+        </h1>
+        <p className="w-full text-[16px] leading-[24px] text-[#3e4947]">
+          Manage your account preferences and personal information.
+        </p>
+      </div>
 
-        <div className={`ps-m-overlay ${menuOpen ? "open" : ""}`} onClick={() => setMenuOpen(false)} />
-        <aside className={`ps-m-drawer ${menuOpen ? "open" : ""}`}>
-          <div className="ps-m-drawer-header">
-            <span className="ps-m-brand-text">EduPortal</span>
-            <button className="ps-m-menu-btn" onClick={() => setMenuOpen(false)} aria-label="Close menu">
-              <Icon name="close" size={20} />
-            </button>
-          </div>
-          <nav className="ps-m-drawer-nav">
-            {NAV_ITEMS.map((item) => {
-              const active = item.label === "Settings";
+      {/* Settings Layout */}
+      <div className="flex w-full flex-col items-start gap-[24px] lg:flex-row">
+        {/* Settings Sidebar (in-page tabs, not the app sidebar) */}
+        <div className="w-full shrink-0 rounded-[12px] border border-[#bdc9c6] bg-white p-[13px] drop-shadow-[0px_1px_1px_rgba(0,0,0,0.05)] lg:w-[256px]">
+          <nav className="flex w-full flex-col items-start gap-[8px]">
+            {TABS.map((tab) => {
+              const isActive = activeTab === tab.id;
               return (
-                <div key={item.label} className={`ps-nav-item ${active ? "active" : ""}`} onClick={() => setMenuOpen(false)}>
-                  <Icon name={item.icon} />
-                  <span>{item.label}</span>
-                </div>
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex w-full items-center justify-between rounded-[8px] px-[16px] py-[12px] text-left text-[14px] leading-[20px] tracking-[0.14px] transition-colors ${
+                    isActive ? 'bg-[#dee8ff] font-bold text-[#005c55]' : 'font-medium text-[#3e4947] hover:bg-[#f9f9ff]'
+                  }`}
+                >
+                  {tab.label}
+                  <ChevronRight active={isActive} />
+                </button>
               );
             })}
           </nav>
-        </aside>
+        </div>
 
-        <main className="ps-m-main">
-          <div>
-            <h1 className="ps-m-h1">Profile & Settings</h1>
-            <p className="ps-m-subtitle">Manage your account and profile details and preferences.</p>
-          </div>
-
-          {saved && <div className="ps-m-saved-banner">Changes saved</div>}
-
-          <div className="ps-m-profile-card">
-            <img className="ps-m-photo" src={imgStudentPhoto} alt="Student" />
-            <p className="ps-m-name">{firstName} {lastName}</p>
-            <p className="ps-m-major">Computer Science, Year 3</p>
-            <span className="ps-m-status-pill">
-              <span className="ps-m-status-dot" />
-              Good Standing &middot; Full Time
-            </span>
-          </div>
-
-          <div className="ps-m-academic-card">
-            <p className="ps-m-academic-title">Academic Status</p>
-            <div className="ps-m-academic-row">
-              <span className="ps-m-academic-label">Student ID</span>
-              <span className="ps-m-academic-value">10283847</span>
-            </div>
-            <div className="ps-m-academic-row">
-              <span className="ps-m-academic-label">Current GPA</span>
-              <span className="ps-m-academic-value">3.8</span>
-            </div>
-            <div className="ps-m-academic-row">
-              <span className="ps-m-academic-label">Expected Grad</span>
-              <span className="ps-m-academic-value">May 2026</span>
-            </div>
-          </div>
-
-          <div className="ps-m-section-card">
-            <div className="ps-m-section-header">
-              <Icon name="user" size={16} />
-              <p className="ps-m-section-title">Personal Information</p>
-            </div>
-            <div className="ps-m-section-body">
-              <div>
-                <label className="ps-m-field-label">First Name</label>
-                <input className="ps-m-input" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-              </div>
-              <div>
-                <label className="ps-m-field-label">Last Name</label>
-                <input className="ps-m-input" value={lastName} onChange={(e) => setLastName(e.target.value)} />
-              </div>
-              <div>
-                <label className="ps-m-field-label">University Email</label>
-                <input className="ps-m-input readonly" value="a.johnson@eduportal.edu" readOnly />
-                <p className="ps-m-field-hint">University email cannot be changed here.</p>
-              </div>
-              <div>
-                <label className="ps-m-field-label">Personal Email</label>
-                <input className="ps-m-input" value={personalEmail} onChange={(e) => setPersonalEmail(e.target.value)} />
-              </div>
-              <div>
-                <label className="ps-m-field-label">Phone Number</label>
-                <input className="ps-m-input" value={phone} onChange={(e) => setPhone(e.target.value)} />
-              </div>
-            </div>
-          </div>
-
-          <div className="ps-m-section-card">
-            <div className="ps-m-section-header">
-              <Icon name="lock" size={16} />
-              <p className="ps-m-section-title">Security</p>
-            </div>
-            <div className="ps-m-section-body">
-              <div className="ps-m-row">
-                <div>
-                  <p className="ps-m-row-title">Password</p>
-                  <p className="ps-m-row-sub">Last changed 3 months ago</p>
+        {/* Settings Content */}
+        <div className="flex min-w-0 flex-1 flex-col items-start gap-[24px]">
+          {activeTab === 'personal' && (
+            <>
+              {/* Profile Header Card */}
+              <div className="flex w-full flex-col items-center gap-[24px] rounded-[12px] border border-[#bdc9c6] bg-white p-[25px] text-center drop-shadow-[0px_1px_1px_rgba(0,0,0,0.05)] sm:flex-row sm:items-start sm:text-left">
+                <div className="relative size-[128px] shrink-0 rounded-full border-4 border-[#f9f9ff] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]">
+                  <img
+                    src={imgStudentPhoto}
+                    alt="Sarah Jenkins"
+                    className="size-full rounded-full object-cover"
+                  />
                 </div>
-                <button className="ps-m-update-btn">Update Password</button>
-              </div>
-              <div className="ps-m-divider" />
-              <div className="ps-m-row">
-                <div>
-                  <p className="ps-m-row-title">Two-Factor Authentication</p>
-                  <p className="ps-m-row-sub">Currently enabled via Authenticator App</p>
+                <div className="flex min-w-0 flex-1 flex-col items-start gap-[8px]">
+                  <h2 className="w-full text-[24px] font-bold leading-[32px] tracking-[-0.24px] text-[#111c2d]">
+                    Sarah Jenkins
+                  </h2>
+                  <p className="w-full text-[16px] leading-[24px] text-[#005c55]">
+                    B.S. Computer Science
+                  </p>
+                  <div className="flex w-full flex-wrap items-start justify-center gap-[16px] whitespace-nowrap pt-[8px] sm:justify-start">
+                    <div className="flex shrink-0 flex-col items-start gap-[4px] self-stretch rounded-[8px] border border-[#bdc9c6] bg-[#e7eeff] px-[17px] py-[9px]">
+                      <span className="text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#3e4947]">
+                        Student ID
+                      </span>
+                      <span className="text-[16px] font-medium leading-[24px] text-[#111c2d]">
+                        #902-11-458
+                      </span>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-start gap-[4px] self-stretch rounded-[8px] border border-[#bdc9c6] bg-[#e7eeff] px-[17px] py-[9px]">
+                      <span className="text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#3e4947]">
+                        Standing
+                      </span>
+                      <span className="text-[16px] font-medium leading-[24px] text-[#111c2d]">
+                        Junior
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <Toggle checked={twoFactor} onChange={setTwoFactor} />
               </div>
-            </div>
-          </div>
 
-          <div className="ps-m-section-card">
-            <div className="ps-m-section-header">
-              <Icon name="bell" size={16} />
-              <p className="ps-m-section-title">Notifications</p>
-            </div>
-            <div className="ps-m-section-body">
-              <div className="ps-m-row">
-                <div>
-                  <p className="ps-m-row-title">Course Announcements</p>
-                  <p className="ps-m-row-sub">Updates from professors and TAs</p>
+              {/* Form Section: Personal Info */}
+              <form
+                onSubmit={handleSave}
+                className="flex w-full flex-col items-start overflow-hidden rounded-[12px] border border-[#bdc9c6] bg-white shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]"
+              >
+                <div className="flex w-full flex-col items-start gap-[4px] border-b border-[#bdc9c6] bg-[#f9f9ff] px-[24px] pb-[17px] pt-[16px]">
+                  <h3 className="w-full text-[20px] font-semibold leading-[30px] text-[#111c2d]">
+                    Basic Information
+                  </h3>
+                  <p className="w-full text-[12px] font-semibold leading-[16px] text-[#3e4947]">
+                    Update your contact details and bio.
+                  </p>
                 </div>
-                <Toggle checked={courseAnnouncements} onChange={setCourseAnnouncements} />
-              </div>
-              <div className="ps-m-divider" />
-              <div className="ps-m-row">
-                <div>
-                  <p className="ps-m-row-title">Grade Updates</p>
-                  <p className="ps-m-row-sub">When new grades are posted</p>
-                </div>
-                <Toggle checked={gradeUpdates} onChange={setGradeUpdates} />
-              </div>
-              <div className="ps-m-divider" />
-              <div className="ps-m-row">
-                <div>
-                  <p className="ps-m-row-title">Assignment Deadlines</p>
-                  <p className="ps-m-row-sub">24 hour reminder before due date</p>
-                </div>
-                <Toggle checked={assignmentDeadlines} onChange={setAssignmentDeadlines} />
-              </div>
-            </div>
-          </div>
 
-          <div className="ps-m-actions">
-            <button className="ps-m-cancel-btn">Cancel</button>
-            <button className="ps-m-save-btn" onClick={handleSave}>Save Changes</button>
-          </div>
-        </main>
+                <div className="grid w-full grid-cols-1 gap-x-[16px] gap-y-[16px] p-[24px] sm:grid-cols-2">
+                  <div className="flex flex-col items-start gap-[8px]">
+                    <label className="text-[14px] font-medium leading-[20px] tracking-[0.14px] text-[#3e4947]">
+                      First Name
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.firstName}
+                      onChange={handleChange('firstName')}
+                      className="w-full rounded-[6px] border border-[#bdc9c6] bg-[#f9f9ff] px-[13px] py-[9px] text-[16px] leading-[24px] text-[#111c2d] outline-none focus:border-[#005c55] focus:ring-1 focus:ring-[#005c55]"
+                    />
+                  </div>
+
+                  <div className="flex flex-col items-start gap-[8px]">
+                    <label className="text-[14px] font-medium leading-[20px] tracking-[0.14px] text-[#3e4947]">
+                      Last Name
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.lastName}
+                      onChange={handleChange('lastName')}
+                      className="w-full rounded-[6px] border border-[#bdc9c6] bg-[#f9f9ff] px-[13px] py-[9px] text-[16px] leading-[24px] text-[#111c2d] outline-none focus:border-[#005c55] focus:ring-1 focus:ring-[#005c55]"
+                    />
+                  </div>
+
+                  <div className="flex flex-col items-start gap-[8px] sm:col-span-2">
+                    <label className="text-[14px] font-medium leading-[20px] tracking-[0.14px] text-[#3e4947]">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      value={formData.email}
+                      disabled
+                      className="w-full cursor-not-allowed rounded-[6px] border border-[#bdc9c6] bg-[#e7eeff] px-[13px] py-[9px] text-[16px] leading-[24px] text-[#3e4947] opacity-70"
+                    />
+                    <p className="pt-[4px] text-[12px] font-semibold leading-[16px] text-[#3e4947]">
+                      Contact IT support to change your institutional email.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col items-start gap-[8px] sm:col-span-2">
+                    <label className="text-[14px] font-medium leading-[20px] tracking-[0.14px] text-[#3e4947]">
+                      Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      value={formData.phone}
+                      onChange={handleChange('phone')}
+                      className="w-full rounded-[6px] border border-[#bdc9c6] bg-[#f9f9ff] px-[13px] py-[9px] text-[16px] leading-[24px] text-[#111c2d] outline-none focus:border-[#005c55] focus:ring-1 focus:ring-[#005c55]"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex w-full items-center justify-end gap-3 border-t border-[#bdc9c6] bg-[#f9f9ff] px-[24px] pb-[16px] pt-[17px]">
+                  {saved && (
+                    <span className="text-[12px] font-semibold text-[#005c55]">Changes saved</span>
+                  )}
+                  <button
+                    type="submit"
+                    className="rounded-[8px] bg-[#005c55] px-[24px] py-[8px] text-[14px] font-medium leading-[20px] tracking-[0.14px] text-white drop-shadow-[0px_1px_1px_rgba(0,0,0,0.05)] hover:bg-[#00473f]"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </form>
+            </>
+          )}
+
+          {activeTab === 'security' && (
+            <>
+              {/* Password form */}
+              <form
+                onSubmit={handleSecuritySave}
+                className="flex w-full flex-col items-start overflow-hidden rounded-[12px] border border-[#bdc9c6] bg-white shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]"
+              >
+                <div className="flex w-full flex-col items-start gap-[4px] border-b border-[#bdc9c6] bg-[#f9f9ff] px-[24px] pb-[17px] pt-[16px]">
+                  <h3 className="w-full text-[20px] font-semibold leading-[30px] text-[#111c2d]">
+                    Change Password
+                  </h3>
+                  <p className="w-full text-[12px] font-semibold leading-[16px] text-[#3e4947]">
+                    Choose a strong password you haven't used before.
+                  </p>
+                </div>
+
+                <div className="grid w-full grid-cols-1 gap-x-[16px] gap-y-[16px] p-[24px] sm:grid-cols-2">
+                  <div className="flex flex-col items-start gap-[8px] sm:col-span-2">
+                    <label className="text-[14px] font-medium leading-[20px] tracking-[0.14px] text-[#3e4947]">
+                      Current Password
+                    </label>
+                    <input
+                      type="password"
+                      value={passwordForm.current}
+                      onChange={handlePasswordChange('current')}
+                      placeholder="••••••••"
+                      className="w-full rounded-[6px] border border-[#bdc9c6] bg-[#f9f9ff] px-[13px] py-[9px] text-[16px] leading-[24px] text-[#111c2d] outline-none focus:border-[#005c55] focus:ring-1 focus:ring-[#005c55]"
+                    />
+                  </div>
+
+                  <div className="flex flex-col items-start gap-[8px]">
+                    <label className="text-[14px] font-medium leading-[20px] tracking-[0.14px] text-[#3e4947]">
+                      New Password
+                    </label>
+                    <input
+                      type="password"
+                      value={passwordForm.next}
+                      onChange={handlePasswordChange('next')}
+                      placeholder="••••••••"
+                      className="w-full rounded-[6px] border border-[#bdc9c6] bg-[#f9f9ff] px-[13px] py-[9px] text-[16px] leading-[24px] text-[#111c2d] outline-none focus:border-[#005c55] focus:ring-1 focus:ring-[#005c55]"
+                    />
+                  </div>
+
+                  <div className="flex flex-col items-start gap-[8px]">
+                    <label className="text-[14px] font-medium leading-[20px] tracking-[0.14px] text-[#3e4947]">
+                      Confirm New Password
+                    </label>
+                    <input
+                      type="password"
+                      value={passwordForm.confirm}
+                      onChange={handlePasswordChange('confirm')}
+                      placeholder="••••••••"
+                      className="w-full rounded-[6px] border border-[#bdc9c6] bg-[#f9f9ff] px-[13px] py-[9px] text-[16px] leading-[24px] text-[#111c2d] outline-none focus:border-[#005c55] focus:ring-1 focus:ring-[#005c55]"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex w-full items-center justify-end gap-3 border-t border-[#bdc9c6] bg-[#f9f9ff] px-[24px] pb-[16px] pt-[17px]">
+                  {securitySaved && (
+                    <span className="text-[12px] font-semibold text-[#005c55]">Password updated</span>
+                  )}
+                  <button
+                    type="submit"
+                    className="rounded-[8px] bg-[#005c55] px-[24px] py-[8px] text-[14px] font-medium leading-[20px] tracking-[0.14px] text-white drop-shadow-[0px_1px_1px_rgba(0,0,0,0.05)] hover:bg-[#00473f]"
+                  >
+                    Update Password
+                  </button>
+                </div>
+              </form>
+
+              {/* Two-factor authentication */}
+              <div className="flex w-full flex-col items-start overflow-hidden rounded-[12px] border border-[#bdc9c6] bg-white shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]">
+                <div className="flex w-full flex-col items-start gap-[4px] border-b border-[#bdc9c6] bg-[#f9f9ff] px-[24px] pb-[17px] pt-[16px]">
+                  <h3 className="w-full text-[20px] font-semibold leading-[30px] text-[#111c2d]">
+                    Two-Factor Authentication
+                  </h3>
+                  <p className="w-full text-[12px] font-semibold leading-[16px] text-[#3e4947]">
+                    Add an extra layer of security to your account.
+                  </p>
+                </div>
+                <div className="w-full px-[24px] py-[8px]">
+                  <Toggle
+                    checked={twoFactor}
+                    onChange={() => setTwoFactor((prev) => !prev)}
+                    label="Enable two-factor authentication"
+                    description="Get a verification code by SMS each time you sign in."
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeTab === 'notifications' && (
+            <div className="flex w-full flex-col items-start overflow-hidden rounded-[12px] border border-[#bdc9c6] bg-white shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]">
+              <div className="flex w-full flex-col items-start gap-[4px] border-b border-[#bdc9c6] bg-[#f9f9ff] px-[24px] pb-[17px] pt-[16px]">
+                <h3 className="w-full text-[20px] font-semibold leading-[30px] text-[#111c2d]">
+                  Notification Preferences
+                </h3>
+                <p className="w-full text-[12px] font-semibold leading-[16px] text-[#3e4947]">
+                  Choose what you want to be notified about.
+                </p>
+              </div>
+              <div className="flex w-full flex-col items-start divide-y divide-[#e5e7eb] px-[24px]">
+                <Toggle
+                  checked={notifications.grades}
+                  onChange={toggleNotification('grades')}
+                  label="Grade updates"
+                  description="Get notified when a new grade is posted."
+                />
+                <Toggle
+                  checked={notifications.announcements}
+                  onChange={toggleNotification('announcements')}
+                  label="Course announcements"
+                  description="Updates from instructors about your courses."
+                />
+                <Toggle
+                  checked={notifications.schedule}
+                  onChange={toggleNotification('schedule')}
+                  label="Schedule changes"
+                  description="Room or time changes for your classes."
+                />
+                <Toggle
+                  checked={notifications.marketing}
+                  onChange={toggleNotification('marketing')}
+                  label="Campus news & offers"
+                  description="Occasional emails about campus events."
+                />
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'appearance' && (
+            <div className="w-full rounded-[12px] border border-[#bdc9c6] bg-white p-8 text-center text-[14px] text-[#3e4947]">
+              Appearance settings go here.
+            </div>
+          )}
+        </div>
+      </div>
       </div>
     </div>
   );
