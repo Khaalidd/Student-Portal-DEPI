@@ -6,7 +6,23 @@ import { supabase } from "../lib/supabaseClient";
 import { courseSchema } from "../validation/courseSchema";
 import { PlusCircle, Trash2 } from "lucide-react";
 
-var DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+var DAYS = [
+  { id: "Mon", label: "Monday" },
+  { id: "Tue", label: "Tuesday" },
+  { id: "Wed", label: "Wednesday" },
+  { id: "Thu", label: "Thursday" },
+  { id: "Fri", label: "Friday" },
+];
+
+var TIME_REGEX = /^(0?[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$/;
+
+function timeStringToDecimal(timeStr) {
+  if (!timeStr) return 0;
+  var parts = timeStr.split(":");
+  var hours = parseFloat(parts[0]) || 0;
+  var minutes = parseFloat(parts[1]) || 0;
+  return hours + minutes / 60;
+}
 
 export default function AdminCourseCreate() {
   var navigate = useNavigate();
@@ -83,7 +99,7 @@ export default function AdminCourseCreate() {
 
   function addScheduleEntry() {
     setScheduleEntries(function (prev) {
-      return prev.concat([{ day: "Monday", startTime: "", endTime: "" }]);
+      return prev.concat([{ day: "Mon", startTime: "", endTime: "" }]);
     });
   }
 
@@ -156,6 +172,26 @@ export default function AdminCourseCreate() {
       return;
     }
 
+    if (scheduleEntries.length > 0) {
+      for (var idx = 0; idx < scheduleEntries.length; idx++) {
+        var entry = scheduleEntries[idx];
+        if (!entry.startTime || !entry.endTime) {
+          setErrors({ save: "All schedule entries must have start and end times." });
+          return;
+        }
+        if (!TIME_REGEX.test(entry.startTime) || !TIME_REGEX.test(entry.endTime)) {
+          setErrors({ save: "Schedule times must be in HH:MM format (e.g. 09:30)." });
+          return;
+        }
+        var startDec = timeStringToDecimal(entry.startTime);
+        var endDec = timeStringToDecimal(entry.endTime);
+        if (startDec >= endDec) {
+          setErrors({ save: "Start time must be before end time." });
+          return;
+        }
+      }
+    }
+
     var selectedInstructor = instructors.find(function (inst) {
       return inst.id === instructorId;
     });
@@ -176,8 +212,8 @@ export default function AdminCourseCreate() {
           return {
             course_code: courseId,
             day: entry.day,
-            start_hour: entry.startTime,
-            end_hour: entry.endTime,
+            start_hour: timeStringToDecimal(entry.startTime),
+            end_hour: timeStringToDecimal(entry.endTime),
             time_label: entry.startTime + " - " + entry.endTime,
             course_id: courseId,
           };
@@ -372,8 +408,8 @@ export default function AdminCourseCreate() {
                         >
                           {DAYS.map(function (day) {
                             return (
-                              <option key={day} value={day}>
-                                {day}
+                              <option key={day.id} value={day.id}>
+                                {day.label}
                               </option>
                             );
                           })}

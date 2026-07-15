@@ -1,22 +1,57 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getNotifications } from '../api/notificationsApi';
+import { getNotifications, markNotificationRead, markAllNotificationsRead } from '../api/notificationsApi';
 
 export default function TopAppBar({ onMenuClick }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [recentNotifs, setRecentNotifs] = useState([]);
+  const [hasUnread, setHasUnread] = useState(false);
 
-  useEffect(function () {
+  const fetchNotifs = function () {
     getNotifications(user ? user.id : null)
       .then(function (data) {
         setRecentNotifs(data.slice(0, 3));
+        setHasUnread(data.some(function (n) { return !n.read; }));
       })
       .catch(function () {});
-  }, [user && user.id]);
+  };
+
+  useEffect(function () {
+    fetchNotifs();
+
+    window.addEventListener('notifications-updated', fetchNotifs);
+    return function () {
+      window.removeEventListener('notifications-updated', fetchNotifs);
+    };
+  }, [user && user.id, location.pathname]);
+
+  const handleMarkAsRead = function (id) {
+    markNotificationRead(id)
+      .then(function () {
+        fetchNotifs();
+        window.dispatchEvent(new CustomEvent('notifications-updated'));
+      })
+      .catch(function (err) {
+        console.error(err);
+      });
+  };
+
+  const handleMarkAllAsReadDropdown = function (e) {
+    e.stopPropagation();
+    markAllNotificationsRead(user ? user.id : null)
+      .then(function () {
+        fetchNotifs();
+        window.dispatchEvent(new CustomEvent('notifications-updated'));
+      })
+      .catch(function (err) {
+        console.error(err);
+      });
+  };
 
   const handleLogout = function () {
     logout();
@@ -65,7 +100,7 @@ export default function TopAppBar({ onMenuClick }) {
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
             </svg>
-            {recentNotifs.length > 0 && (
+            {hasUnread && (
               <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
             )}
           </button>
@@ -74,8 +109,16 @@ export default function TopAppBar({ onMenuClick }) {
             <>
               <div onClick={function () { setNotifOpen(false); }} className="fixed inset-0 z-10" />
               <div className="absolute right-0 mt-2 w-80 rounded-lg border border-gray-150 bg-white shadow-lg z-20 overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-100">
+                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
                   <p className="text-sm font-semibold text-gray-800">Notifications</p>
+                  {hasUnread && (
+                    <button
+                      onClick={handleMarkAllAsReadDropdown}
+                      className="text-xs font-semibold text-teal-600 hover:text-teal-700 cursor-pointer"
+                    >
+                      Mark all as read
+                    </button>
+                  )}
                 </div>
                 <div className="max-h-64 overflow-y-auto">
                   {recentNotifs.length === 0 && (
@@ -83,9 +126,24 @@ export default function TopAppBar({ onMenuClick }) {
                   )}
                   {recentNotifs.map(function (n) {
                     return (
-                      <div key={n.id} className="px-4 py-3 border-b border-gray-50 hover:bg-gray-50">
-                        <p className="text-xs font-semibold text-gray-700">{n.title}</p>
-                        <p className="text-[10px] text-gray-400 mt-0.5">{n.time_label} • {n.source_label}</p>
+                      <div
+                        key={n.id}
+                        onClick={function () {
+                          if (!n.read) {
+                            handleMarkAsRead(n.id);
+                          }
+                        }}
+                        className={`px-4 py-3 border-b border-gray-50 flex items-start gap-2.5 transition-colors ${
+                          !n.read ? 'bg-teal-50/30 hover:bg-teal-50/60 cursor-pointer' : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        {!n.read && (
+                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-teal-600" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-xs text-gray-700 ${!n.read ? 'font-semibold' : ''}`}>{n.title}</p>
+                          <p className="text-[10px] text-gray-400 mt-0.5">{n.time_label} • {n.source_label}</p>
+                        </div>
                       </div>
                     );
                   })}

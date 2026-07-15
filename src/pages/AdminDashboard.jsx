@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import {
   Users,
@@ -21,22 +20,45 @@ import { supabase } from "../lib/supabaseClient";
 
 var STAT_ICONS = {
   "Total Students": Users,
-  "Total Faculty": GraduationCap,
+  "Total Instructors": GraduationCap,
   "Active Courses": BookOpen,
 };
 
 /* ---------- data ---------- */
 
 var desktopActions = [
-  { title: "Add New User", subtitle: "Create student or faculty profile", icon: UserPlus, action: "/admin/users" },
-  { title: "Create Course", subtitle: "Initialize a new academic course", icon: FilePlus2, action: "/admin/courses/new" },
-  { title: "System Announcement", subtitle: "Broadcast message to all users", icon: Megaphone, action: "announcement" },
+  {
+    title: "Add New User",
+    subtitle: "Create student or faculty profile",
+    icon: UserPlus,
+    action: "/admin/users",
+  },
+  {
+    title: "Create Course",
+    subtitle: "Initialize a new academic course",
+    icon: FilePlus2,
+    action: "/admin/courses/new",
+  },
+  {
+    title: "System Announcement",
+    subtitle: "Broadcast message to all users",
+    icon: Megaphone,
+    action: "announcement",
+  },
 ];
 
 var mobileActions = [
   { title: "Add New Student", icon: UserPlus, action: "/admin/users" },
-  { title: "Send Global Announcement", icon: Megaphone, action: "announcement" },
-  { title: "Manage Roles & Permissions", icon: ShieldCheck, action: "/admin/users" },
+  {
+    title: "Send Global Announcement",
+    icon: Megaphone,
+    action: "announcement",
+  },
+  {
+    title: "Manage Roles & Permissions",
+    icon: ShieldCheck,
+    action: "/admin/users",
+  },
 ];
 
 /* ---------- small pieces ---------- */
@@ -48,7 +70,9 @@ function DeltaPill({ type, children }) {
     down: "text-gray-500 bg-gray-100",
   };
   return (
-    <span className={`absolute top-5 right-5 text-xs font-bold px-2 py-1 rounded-full ${styles[type]}`}>
+    <span
+      className={`absolute top-5 right-5 text-xs font-bold px-2 py-1 rounded-full ${styles[type]}`}
+    >
       {children}
     </span>
   );
@@ -59,15 +83,23 @@ function DesktopStatCard({ label, value, delta, deltaType, icon: Icon }) {
     <div className="relative bg-white border border-gray-200 rounded-2xl p-5">
       {delta && (
         <DeltaPill type={deltaType}>
-          {deltaType === "up" ? "\u2197 " : deltaType === "down" ? "\u2198 " : ""}
+          {deltaType === "up"
+            ? "\u2197 "
+            : deltaType === "down"
+              ? "\u2198 "
+              : ""}
           {delta}
         </DeltaPill>
       )}
       <div className="w-10 h-10 rounded-xl bg-emerald-50 text-teal-800 flex items-center justify-center mb-4">
         <Icon size={18} />
       </div>
-      <div className="text-xs font-bold tracking-wider uppercase text-gray-500 mb-1">{label}</div>
-      <div className="text-2xl font-extrabold tracking-tight text-gray-900">{value}</div>
+      <div className="text-xs font-bold tracking-wider uppercase text-gray-500 mb-1">
+        {label}
+      </div>
+      <div className="text-2xl font-extrabold tracking-tight text-gray-900">
+        {value}
+      </div>
     </div>
   );
 }
@@ -82,7 +114,9 @@ function DesktopHealthCard() {
       <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center mb-4">
         <Server size={18} />
       </div>
-      <div className="text-xs font-bold tracking-wider uppercase text-white/70 mb-1">System Health</div>
+      <div className="text-xs font-bold tracking-wider uppercase text-white/70 mb-1">
+        System Health
+      </div>
       <div className="text-xl font-extrabold tracking-tight">99.98% Uptime</div>
     </div>
   );
@@ -98,7 +132,11 @@ function MobileStatCard({ label, value, delta, icon: Icon }) {
         </div>
       </div>
       <div className="text-2xl font-extrabold text-gray-900">{value}</div>
-      {delta && <div className="text-xs font-semibold text-emerald-600 mt-1">\u2191 {delta} from last term</div>}
+      {delta && (
+        <div className="text-xs font-semibold text-emerald-600 mt-1">
+          \u2191 {delta} from last term
+        </div>
+      )}
     </div>
   );
 }
@@ -108,7 +146,9 @@ function MobileHealthCard() {
     <div className="bg-white border border-gray-200 rounded-2xl p-4">
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm font-bold text-gray-900">System Health</span>
-        <span className="text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-full">Optimal</span>
+        <span className="text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-full">
+          Optimal
+        </span>
       </div>
       <div className="space-y-3">
         <div>
@@ -117,7 +157,10 @@ function MobileHealthCard() {
             <span className="font-semibold text-gray-700">99.8%</span>
           </div>
           <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-            <div className="h-full bg-teal-700 rounded-full" style={{ width: "99.8%" }} />
+            <div
+              className="h-full bg-teal-700 rounded-full"
+              style={{ width: "99.8%" }}
+            />
           </div>
         </div>
         <div>
@@ -126,7 +169,10 @@ function MobileHealthCard() {
             <span className="font-semibold text-gray-700">42%</span>
           </div>
           <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-            <div className="h-full bg-teal-700 rounded-full" style={{ width: "42%" }} />
+            <div
+              className="h-full bg-teal-700 rounded-full"
+              style={{ width: "42%" }}
+            />
           </div>
         </div>
       </div>
@@ -136,7 +182,10 @@ function MobileHealthCard() {
 
 function ActionRow({ title, subtitle, icon: Icon, onClick }) {
   return (
-    <div className="flex items-center gap-3 py-3 cursor-pointer group" onClick={onClick}>
+    <div
+      className="flex items-center gap-3 py-3 cursor-pointer group"
+      onClick={onClick}
+    >
       <div className="w-9 h-9 rounded-lg bg-emerald-50 text-teal-800 flex items-center justify-center flex-none">
         <Icon size={16} />
       </div>
@@ -144,7 +193,10 @@ function ActionRow({ title, subtitle, icon: Icon, onClick }) {
         <div className="text-sm font-semibold text-gray-900">{title}</div>
         {subtitle && <div className="text-xs text-gray-500">{subtitle}</div>}
       </div>
-      <ChevronRight size={16} className="ml-auto flex-none text-gray-300 group-hover:text-gray-500" />
+      <ChevronRight
+        size={16}
+        className="ml-auto flex-none text-gray-300 group-hover:text-gray-500"
+      />
     </div>
   );
 }
@@ -204,7 +256,10 @@ export default function EduPortalDashboard() {
     var cancelled = false;
     async function fetchData() {
       try {
-        var [allUsers, allCourses] = await Promise.all([getUsers(), getAllCourses()]);
+        var [allUsers, allCourses] = await Promise.all([
+          getUsers(),
+          getAllCourses(),
+        ]);
 
         if (cancelled) return;
 
@@ -217,9 +272,24 @@ export default function EduPortalDashboard() {
         var courseCount = allCourses.length;
 
         setStats([
-          { label: "Total Students", value: String(studentCount), delta: "", deltaType: "" },
-          { label: "Total Faculty", value: String(facultyCount), delta: "", deltaType: "" },
-          { label: "Active Courses", value: String(courseCount), delta: "", deltaType: "" },
+          {
+            label: "Total Students",
+            value: String(studentCount),
+            delta: "",
+            deltaType: "",
+          },
+          {
+            label: "Total Instructors",
+            value: String(facultyCount),
+            delta: "",
+            deltaType: "",
+          },
+          {
+            label: "Active Courses",
+            value: String(courseCount),
+            delta: "",
+            deltaType: "",
+          },
         ]);
 
         var adminUsers = allUsers.filter(function (u) {
@@ -299,11 +369,17 @@ export default function EduPortalDashboard() {
         {/* Title block */}
         <div className="mb-5 md:mb-6">
           <div className="md:hidden">
-            <h1 className="text-xl font-extrabold tracking-tight">Admin Dashboard</h1>
-            <p className="text-sm text-gray-500 mt-1">System overview and quick controls.</p>
+            <h1 className="text-xl font-extrabold tracking-tight">
+              Admin Dashboard
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">
+              System overview and quick controls.
+            </p>
           </div>
           <div className="hidden md:block">
-            <h1 className="text-2xl font-extrabold tracking-tight">System Overview</h1>
+            <h1 className="text-2xl font-extrabold tracking-tight">
+              System Overview
+            </h1>
             <p className="text-sm text-gray-500 mt-1">
               Welcome back, Admin. Here is the current state of EduPortal.
             </p>
@@ -331,7 +407,15 @@ export default function EduPortalDashboard() {
             </div>
             <div className="divide-y divide-gray-100">
               {mobileActions.map(function (a) {
-                return <ActionRow key={a.title} {...a} onClick={function () { handleActionClick(a.action); }} />;
+                return (
+                  <ActionRow
+                    key={a.title}
+                    {...a}
+                    onClick={function () {
+                      handleActionClick(a.action);
+                    }}
+                  />
+                );
               })}
             </div>
           </div>
@@ -360,10 +444,20 @@ export default function EduPortalDashboard() {
           <section className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-5">
             <div className="bg-white border border-gray-200 rounded-2xl p-5">
               <h2 className="text-base font-bold">Quick Actions</h2>
-              <p className="text-sm text-gray-500">Frequently used administrative tasks.</p>
+              <p className="text-sm text-gray-500">
+                Frequently used administrative tasks.
+              </p>
               <div className="divide-y divide-gray-100 mt-1">
                 {desktopActions.map(function (a) {
-                  return <ActionRow key={a.title} {...a} onClick={function () { handleActionClick(a.action); }} />;
+                  return (
+                    <ActionRow
+                      key={a.title}
+                      {...a}
+                      onClick={function () {
+                        handleActionClick(a.action);
+                      }}
+                    />
+                  );
                 })}
               </div>
             </div>
@@ -372,10 +466,14 @@ export default function EduPortalDashboard() {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <h2 className="text-base font-bold">Role Management</h2>
-                  <p className="text-sm text-gray-500">Active system administrators and roles.</p>
+                  <p className="text-sm text-gray-500">
+                    Active system administrators and roles.
+                  </p>
                 </div>
                 <button
-                  onClick={function () { navigate("/admin/users"); }}
+                  onClick={function () {
+                    navigate("/admin/users");
+                  }}
                   className="flex items-center gap-1.5 bg-teal-800 hover:bg-teal-900 text-white text-xs font-semibold px-3.5 py-2 rounded-lg whitespace-nowrap"
                 >
                   + Manage Roles
@@ -403,13 +501,19 @@ export default function EduPortalDashboard() {
                               {u.initials}
                             </div>
                             <div>
-                              <div className="font-semibold text-gray-900">{u.name}</div>
-                              <div className="text-xs text-gray-500">{u.email}</div>
+                              <div className="font-semibold text-gray-900">
+                                {u.name}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {u.email}
+                              </div>
                             </div>
                           </div>
                         </td>
                         <td className="py-3">
-                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${u.role_style}`}>
+                          <span
+                            className={`text-xs font-semibold px-2.5 py-1 rounded-full ${u.role_style}`}
+                          >
                             {u.role}
                           </span>
                         </td>
@@ -433,17 +537,24 @@ export default function EduPortalDashboard() {
       {showAnnouncementModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">System Announcement</h2>
+            <h2 className="text-lg font-bold text-gray-900 mb-4">
+              System Announcement
+            </h2>
             <textarea
               className="w-full border border-gray-300 rounded-lg p-3 text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               rows={4}
               placeholder="Type your announcement message..."
               value={announcementMessage}
-              onChange={function (e) { setAnnouncementMessage(e.target.value); }}
+              onChange={function (e) {
+                setAnnouncementMessage(e.target.value);
+              }}
             />
             <div className="flex justify-end gap-3 mt-4">
               <button
-                onClick={function () { setShowAnnouncementModal(false); setAnnouncementMessage(""); }}
+                onClick={function () {
+                  setShowAnnouncementModal(false);
+                  setAnnouncementMessage("");
+                }}
                 className="px-4 py-2 text-sm font-semibold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
               >
                 Cancel

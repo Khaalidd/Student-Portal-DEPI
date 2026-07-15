@@ -1,6 +1,6 @@
 // Notifications.jsx
 import { useState, useEffect } from 'react';
-import { getNotifications, markAllNotificationsRead } from '../api/notificationsApi';
+import { getNotifications, markAllNotificationsRead, markNotificationRead } from '../api/notificationsApi';
 import { useAuth } from '../context/AuthContext';
 
 // Categories are static UI filters, not fetched data.
@@ -46,17 +46,23 @@ const TYPE_STYLES = {
 
 // One notification card. Kept as its own function so we don't repeat
 // the same markup 4+ times inside the main component below.
-function NotificationCard({ notification }) {
+function NotificationCard({ notification, onMarkAsRead }) {
   const styles = TYPE_STYLES[notification.type];
 
   // Unread notifications get a solid color bar on the left.
   // Read notifications get a faded/transparent bar and slightly lower opacity.
   const leftBorderClass = notification.read ? 'border-l-transparent' : styles.leftBorder;
   const cardOpacityClass = notification.read ? 'opacity-80' : 'opacity-100';
+  const interactiveStyles = !notification.read ? 'cursor-pointer hover:bg-teal-50/10 hover:shadow-md transition-all duration-200' : '';
 
   return (
     <div
-      className={`flex gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm border-l-4 ${leftBorderClass} ${cardOpacityClass}`}
+      onClick={function () {
+        if (!notification.read && onMarkAsRead) {
+          onMarkAsRead(notification.id);
+        }
+      }}
+      className={`flex gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm border-l-4 ${leftBorderClass} ${cardOpacityClass} ${interactiveStyles}`}
     >
       {/* Round icon on the left */}
       <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${styles.iconBg} ${styles.iconText} font-semibold`}>
@@ -105,6 +111,17 @@ export default function Notifications() {
   var [error, setError] = useState('');
   var [selectedCategory, setSelectedCategory] = useState('all');
 
+  const fetchNotifs = function () {
+    getNotifications(user ? user.id : null)
+      .then(function (data) {
+        setNotifications(data);
+        setError('');
+      })
+      .catch(function (err) {
+        setError(err.message);
+      });
+  };
+
   // Fetch notifications on mount, filtered by the logged-in user
   useEffect(function fetchNotifications() {
     setLoading(true);
@@ -119,7 +136,14 @@ export default function Notifications() {
       .finally(function () {
         setLoading(false);
       });
-  }, []);
+  }, [user && user.id]);
+
+  useEffect(function () {
+    window.addEventListener('notifications-updated', fetchNotifs);
+    return function () {
+      window.removeEventListener('notifications-updated', fetchNotifs);
+    };
+  }, [user && user.id]);
 
   // Compute category counts from the actual fetched data
   const categoryCounts = {};
@@ -138,12 +162,30 @@ export default function Notifications() {
     function (n) { return n.type === 'urgent' && !n.read; }
   ).length;
 
+  async function handleMarkAsRead(id) {
+    try {
+      await markNotificationRead(id);
+      setNotifications(function (prev) {
+        return prev.map(function (n) {
+          if (n.id === id) {
+            return { ...n, read: true };
+          }
+          return n;
+        });
+      });
+      window.dispatchEvent(new CustomEvent('notifications-updated'));
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   async function handleMarkAllAsRead() {
     try {
       await markAllNotificationsRead(user ? user.id : null);
       setNotifications(function (prev) {
         return prev.map(function (n) { return { ...n, read: true }; });
       });
+      window.dispatchEvent(new CustomEvent('notifications-updated'));
     } catch (err) {
       setError(err.message);
     }
@@ -226,7 +268,7 @@ export default function Notifications() {
               </h2>
               <div className="flex flex-col gap-3">
                 {todayNotifications.map(function (notification) {
-                  return <NotificationCard key={notification.id} notification={notification} />;
+                  return <NotificationCard key={notification.id} notification={notification} onMarkAsRead={handleMarkAsRead} />;
                 })}
               </div>
             </div>
@@ -239,7 +281,7 @@ export default function Notifications() {
               </h2>
               <div className="flex flex-col gap-3">
                 {yesterdayNotifications.map(function (notification) {
-                  return <NotificationCard key={notification.id} notification={notification} />;
+                  return <NotificationCard key={notification.id} notification={notification} onMarkAsRead={handleMarkAsRead} />;
                 })}
               </div>
             </div>
