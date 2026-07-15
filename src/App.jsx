@@ -20,6 +20,7 @@ import Profile from './pages/Profile';
 
 // Instructor
 import InstructorDashboard from './pages/InstructorDashboard';
+import InstructorCourses from './pages/InstructorCourses';
 import CourseManagement from './pages/CourseManagement';
 import Gradebook from './pages/Gradebook';
 
@@ -52,7 +53,9 @@ export default function App() {
             {/* Instructor-only routes */}
             <Route element={<ProtectedRoute role="instructor" />}>
               <Route path="/instructor/dashboard" element={<InstructorDashboard />} />
+              <Route path="/instructor/courses" element={<InstructorCourses />} />
               <Route path="/instructor/courses/:courseId" element={<CourseManagement />} />
+              <Route path="/instructor/gradebook" element={<Gradebook />} />
               <Route path="/instructor/courses/:courseId/gradebook" element={<Gradebook />} />
             </Route>
 

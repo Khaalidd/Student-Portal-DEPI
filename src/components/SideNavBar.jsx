@@ -1,8 +1,9 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function SideNavBar({ isOpen, onClose }) {
   const { user } = useAuth();
+  const location = useLocation();
 
   // Define navigation links based on user role
   const getNavLinks = () => {
@@ -174,7 +175,7 @@ export default function SideNavBar({ isOpen, onClose }) {
         },
         {
           label: "Grades",
-          to: "/instructor/courses/:courseId/gradebook",
+          to: "/instructor/gradebook",
           icon: (
             <svg
               className="w-5 h-5"
@@ -193,7 +194,7 @@ export default function SideNavBar({ isOpen, onClose }) {
         },
         {
           label: "Courses",
-          to: "/instructor/courses/:courseId",
+          to: "/instructor/courses",
           icon: (
             <svg
               className="w-5 h-5"
@@ -299,23 +300,36 @@ export default function SideNavBar({ isOpen, onClose }) {
 
       {/* Nav links */}
       <nav className="flex-1 space-y-1">
-        {navLinks.map((link, idx) => (
-          <NavLink
-            key={idx}
-            to={link.to}
-            onClick={onClose} // Auto-close drawer on mobile link click
-            className={({ isActive }) =>
-              `flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+        {navLinks.map((link, idx) => {
+          let isActive = false;
+          if (link.to === "/instructor/courses") {
+            // Courses tab active for /instructor/courses and /instructor/courses/:id but NOT /gradebook
+            isActive = location.pathname.startsWith("/instructor/courses") && !location.pathname.includes("/gradebook");
+          } else if (link.to === "/student/courses") {
+             isActive = location.pathname.startsWith("/student/courses");
+          } else if (link.label === "Grades" && link.to.includes("gradebook")) {
+             isActive = location.pathname.includes("/gradebook");
+          } else {
+             // For others, use exact match or specific startsWith logic
+             isActive = location.pathname === link.to || (link.to !== '/' && location.pathname.startsWith(link.to) && link.to.length > 1);
+          }
+
+          return (
+            <NavLink
+              key={idx}
+              to={link.to}
+              onClick={onClose} // Auto-close drawer on mobile link click
+              className={`flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                 isActive
                   ? "bg-teal-50/70 text-teal-600 border-l-4 border-teal-600 rounded-l-none"
                   : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
-              }`
-            }
-          >
-            <span className="shrink-0">{link.icon}</span>
-            <span>{link.label}</span>
-          </NavLink>
-        ))}
+              }`}
+            >
+              <span className="shrink-0">{link.icon}</span>
+              <span>{link.label}</span>
+            </NavLink>
+          );
+        })}
       </nav>
     </div>
   );

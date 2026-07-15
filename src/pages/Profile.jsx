@@ -35,8 +35,6 @@ function capitalize(str) {
 var TABS = [
   { id: "personal", label: "Personal Info" },
   { id: "security", label: "Security" },
-  { id: "notifications", label: "Notifications" },
-  { id: "appearance", label: "Appearance" },
 ];
 
 function ChevronRight({ active }) {
@@ -501,71 +499,8 @@ export default function ProfileSettings() {
               </button>
             </form>
           )}
-
-          <div className="pt-[14px]">
-            <Toggle
-              checked={mobileTwoFactor}
-              onChange={function () {
-                setMobileTwoFactor(function (prev) {
-                  return !prev;
-                });
-              }}
-              label="Two-Factor Authentication"
-              description={
-                mobileTwoFactor
-                  ? "Currently enabled via Authenticator App"
-                  : "Currently disabled"
-              }
-            />
-          </div>
         </div>
 
-        {/* Notifications */}
-        <div className="w-full rounded-[12px] border border-[#bdc9c6] bg-white p-[16px]">
-          <div className="mb-[4px] flex items-center gap-[8px]">
-            <svg
-              className="size-[16px] shrink-0"
-              viewBox="0 0 20 20"
-              fill="none"
-            >
-              <path
-                d="M15 14H5l1.2-1.5V9a3.8 3.8 0 013.5-3.8V4a1 1 0 012 0v1.2A3.8 3.8 0 0115 9v3.5L15 14z"
-                stroke="#005c55"
-                strokeWidth="1.4"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M8.5 16.5a1.5 1.5 0 003 0"
-                stroke="#005c55"
-                strokeWidth="1.4"
-                strokeLinecap="round"
-              />
-            </svg>
-            <h3 className="text-[15px] font-semibold text-[#111c2d]">
-              Notifications
-            </h3>
-          </div>
-          <div className="flex flex-col divide-y divide-[#e5e7eb]">
-            <Toggle
-              checked={mobileNotifications.courseAnnouncements}
-              onChange={toggleMobileNotification("courseAnnouncements")}
-              label="Course Announcements"
-              description="Updates from professors and TAs"
-            />
-            <Toggle
-              checked={mobileNotifications.gradeUpdates}
-              onChange={toggleMobileNotification("gradeUpdates")}
-              label="Grade Updates"
-              description="When new grades are posted"
-            />
-            <Toggle
-              checked={mobileNotifications.assignmentDeadline}
-              onChange={toggleMobileNotification("assignmentDeadline")}
-              label="Assignment Deadline"
-              description="24 hour reminder before due dates"
-            />
-          </div>
-        </div>
 
         {/* Actions */}
         <div className="flex w-full items-center gap-[12px] pb-[8px] pt-[4px]">
@@ -828,75 +763,7 @@ export default function ProfileSettings() {
                   </div>
                 </form>
 
-                {/* Two-factor authentication */}
-                <div className="flex w-full flex-col items-start overflow-hidden rounded-[12px] border border-[#bdc9c6] bg-white shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]">
-                  <div className="flex w-full flex-col items-start gap-[4px] border-b border-[#bdc9c6] bg-[#f9f9ff] px-[24px] pb-[17px] pt-[16px]">
-                    <h3 className="w-full text-[20px] font-semibold leading-[30px] text-[#111c2d]">
-                      Two-Factor Authentication
-                    </h3>
-                    <p className="w-full text-[12px] font-semibold leading-[16px] text-[#3e4947]">
-                      Add an extra layer of security to your account.
-                    </p>
-                  </div>
-                  <div className="w-full px-[24px] py-[8px]">
-                    <Toggle
-                      checked={twoFactor}
-                      onChange={function () {
-                        setTwoFactor(function (prev) {
-                          return !prev;
-                        });
-                      }}
-                      label="Enable two-factor authentication"
-                      description="Get a verification code by SMS each time you sign in."
-                    />
-                  </div>
-                </div>
               </>
-            )}
-
-            {activeTab === "notifications" && (
-              <div className="flex w-full flex-col items-start overflow-hidden rounded-[12px] border border-[#bdc9c6] bg-white shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]">
-                <div className="flex w-full flex-col items-start gap-[4px] border-b border-[#bdc9c6] bg-[#f9f9ff] px-[24px] pb-[17px] pt-[16px]">
-                  <h3 className="w-full text-[20px] font-semibold leading-[30px] text-[#111c2d]">
-                    Notification Preferences
-                  </h3>
-                  <p className="w-full text-[12px] font-semibold leading-[16px] text-[#3e4947]">
-                    Choose what you want to be notified about.
-                  </p>
-                </div>
-                <div className="flex w-full flex-col items-start divide-y divide-[#e5e7eb] px-[24px]">
-                  <Toggle
-                    checked={notifications.grades}
-                    onChange={toggleNotification("grades")}
-                    label="Grade updates"
-                    description="Get notified when a new grade is posted."
-                  />
-                  <Toggle
-                    checked={notifications.announcements}
-                    onChange={toggleNotification("announcements")}
-                    label="Course announcements"
-                    description="Updates from instructors about your courses."
-                  />
-                  <Toggle
-                    checked={notifications.schedule}
-                    onChange={toggleNotification("schedule")}
-                    label="Schedule changes"
-                    description="Room or time changes for your classes."
-                  />
-                  <Toggle
-                    checked={notifications.marketing}
-                    onChange={toggleNotification("marketing")}
-                    label="Campus news & offers"
-                    description="Occasional emails about campus events."
-                  />
-                </div>
-              </div>
-            )}
-
-            {activeTab === "appearance" && (
-              <div className="w-full rounded-[12px] border border-[#bdc9c6] bg-white p-8 text-center text-[14px] text-[#3e4947]">
-                Appearance settings go here.
-              </div>
             )}
           </div>
         </div>

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { getGradebookEntries, updateGradebookEntry } from "../api/gradebookApi";
-import { getCourse, getCourseStudents } from "../api/coursesApi";
+import { getCourse, getCourseStudents, getAllCourses } from "../api/coursesApi";
+import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabaseClient";
 
 function getInitials(name) {
@@ -25,31 +26,59 @@ function avatarColor(initials) {
 }
 
 export default function Gradebook() {
-  var { courseId = "cs301" } = useParams();
-  var [course, setCourse] = useState(null);
-  var [students, setStudents] = useState([]);
-  var [loading, setLoading] = useState(true);
-  var [error, setError] = useState(null);
-  var [editingCell, setEditingCell] = useState(null);
-  var [editValue, setEditValue] = useState("");
-  var [saving, setSaving] = useState(false);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { courseId } = useParams();
+  
+  const [instructorCourses, setInstructorCourses] = useState([]);
+  const [activeCourseId, setActiveCourseId] = useState(courseId || "");
+  const [course, setCourse] = useState(null);
+  
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [editingCell, setEditingCell] = useState(null);
+  const [editValue, setEditValue] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  var [section, setSection] = useState("All Sections");
-  var [filter, setFilter] = useState("Needs Attention");
+  const [section, setSection] = useState("All Sections");
+  const [filter, setFilter] = useState("Needs Attention");
+
+  // Fetch instructor's courses on mount
+  useEffect(() => {
+    let cancelled = false;
+    if (!user || !user.id) return;
+    
+    getAllCourses()
+      .then((allCourses) => {
+        if (cancelled) return;
+        const myCourses = allCourses.filter(c => c.instructor_id === user.id);
+        setInstructorCourses(myCourses);
+        if (!activeCourseId && myCourses.length > 0) {
+          setActiveCourseId(myCourses[0].id);
+        }
+      })
+      .catch(console.error);
+      
+    return () => { cancelled = true; };
+  }, [user]);
 
   useEffect(function () {
     var cancelled = false;
+    
+    if (!activeCourseId) return;
+    
     setLoading(true);
     setError(null);
 
-    getCourse(courseId)
+    getCourse(activeCourseId)
       .then(function (courseData) {
         if (cancelled) return;
         setCourse(courseData);
 
         return Promise.all([
-            getGradebookEntries(courseId),
-            getCourseStudents(courseId),
+            getGradebookEntries(activeCourseId),
+            getCourseStudents(activeCourseId),
           ])
           .then(function (_a) {
             if (cancelled) return;
@@ -99,7 +128,7 @@ export default function Gradebook() {
     return function () {
       cancelled = true;
     };
-  }, [courseId]);
+  }, [activeCourseId]);
 
   function handleCellClick(studentId, field, currentValue) {
     if (saving) return;
@@ -265,12 +294,30 @@ export default function Gradebook() {
 
       <div>
 
-        <h1 className="text-3xl font-bold text-slate-800 sm:text-4xl lg:text-5xl">
-          {course.title}
-        </h1>
+        {instructorCourses.length > 1 ? (
+          <select 
+            value={activeCourseId}
+            onChange={(e) => {
+              setActiveCourseId(e.target.value);
+              // Update URL if we are on a specific course gradebook route
+              if (courseId) {
+                navigate(`/instructor/courses/${e.target.value}/gradebook`);
+              }
+            }}
+            className="mb-2 text-3xl font-bold text-slate-800 bg-transparent border-b-2 border-transparent hover:border-gray-300 focus:border-teal-600 focus:outline-none transition-all cursor-pointer"
+          >
+            {instructorCourses.map(c => (
+              <option key={c.id} value={c.id}>{c.title}</option>
+            ))}
+          </select>
+        ) : (
+          <h1 className="text-3xl font-bold text-slate-800 sm:text-4xl lg:text-5xl">
+            {course.title}
+          </h1>
+        )}
 
         <p className="mt-2 text-base text-gray-500 sm:text-lg">
-          Fall 2024 Gradebook
+          {course.term || 'Ongoing'} Gradebook
         </p>
 
       </div>
