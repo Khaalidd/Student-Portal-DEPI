@@ -146,6 +146,7 @@ export default function MyCourses() {
         ]);
       })
       .then(function () {
+        window.dispatchEvent(new CustomEvent('notifications-updated'));
         return getMyCourses(user.id);
       })
       .then(function (data) {
