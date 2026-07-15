@@ -1,7 +1,6 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
-
   Users,
   GraduationCap,
   BookOpen,
@@ -13,61 +12,37 @@ import {
   ChevronRight,
   MoreVertical,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { getUsers } from "../api/usersApi";
+import { getAllCourses } from "../api/coursesApi";
+import { supabase } from "../lib/supabaseClient";
+
+/* ---------- icon lookup ---------- */
+
+var STAT_ICONS = {
+  "Total Students": Users,
+  "Total Faculty": GraduationCap,
+  "Active Courses": BookOpen,
+};
 
 /* ---------- data ---------- */
 
-const desktopStats = [
-  { label: "Total Students", value: "12,450", delta: "+5.2%", deltaType: "up", icon: Users },
-  { label: "Total Faculty", value: "842", delta: "+1.1%", deltaType: "up", icon: GraduationCap },
-  { label: "Active Courses", value: "3,120", delta: "-8%", deltaType: "down", icon: BookOpen },
+var desktopActions = [
+  { title: "Add New User", subtitle: "Create student or faculty profile", icon: UserPlus, action: "/admin/users" },
+  { title: "Create Course", subtitle: "Initialize a new academic course", icon: FilePlus2, action: "/admin/courses/new" },
+  { title: "System Announcement", subtitle: "Broadcast message to all users", icon: Megaphone, action: "announcement" },
 ];
 
-const desktopActions = [
-  { title: "Add New User", subtitle: "Create student or faculty profile", icon: UserPlus },
-  { title: "Create Course", subtitle: "Initialize a new academic course", icon: FilePlus2 },
-  { title: "System Announcement", subtitle: "Broadcast message to all users", icon: Megaphone },
-];
-
-const mobileActions = [
-  { title: "Add New Student", icon: UserPlus },
-  { title: "Send Global Announcement", icon: Megaphone },
-  { title: "Manage Roles & Permissions", icon: ShieldCheck },
-];
-
-const admins = [
-  {
-    initials: "SJ",
-    name: "Sarah Jenkins",
-    email: "sarah.j@eduportal.edu",
-    role: "Super Admin",
-    roleStyle: "text-emerald-700 bg-emerald-50",
-    lastActive: "Just now",
-    avatarBg: "bg-blue-500",
-  },
-  {
-    initials: "MR",
-    name: "Michael Ross",
-    email: "m.ross@eduportal.edu",
-    role: "IT Admin",
-    roleStyle: "text-blue-600 bg-transparent",
-    lastActive: "2 hours ago",
-    avatarBg: "bg-purple-500",
-  },
-  {
-    initials: "EL",
-    name: "Elena Liu",
-    email: "elena.li@eduportal.edu",
-    role: "Academic Registrar",
-    roleStyle: "text-sky-700 bg-sky-50",
-    lastActive: "Yesterday",
-    avatarBg: "bg-orange-400",
-  },
+var mobileActions = [
+  { title: "Add New Student", icon: UserPlus, action: "/admin/users" },
+  { title: "Send Global Announcement", icon: Megaphone, action: "announcement" },
+  { title: "Manage Roles & Permissions", icon: ShieldCheck, action: "/admin/users" },
 ];
 
 /* ---------- small pieces ---------- */
 
 function DeltaPill({ type, children }) {
-  const styles = {
+  var styles = {
     up: "text-emerald-600 bg-emerald-50",
     flat: "text-amber-600 bg-amber-50",
     down: "text-gray-500 bg-gray-100",
@@ -82,10 +57,12 @@ function DeltaPill({ type, children }) {
 function DesktopStatCard({ label, value, delta, deltaType, icon: Icon }) {
   return (
     <div className="relative bg-white border border-gray-200 rounded-2xl p-5">
-      <DeltaPill type={deltaType}>
-        {deltaType === "up" ? "↗ " : deltaType === "down" ? "↘ " : ""}
-        {delta}
-      </DeltaPill>
+      {delta && (
+        <DeltaPill type={deltaType}>
+          {deltaType === "up" ? "\u2197 " : deltaType === "down" ? "\u2198 " : ""}
+          {delta}
+        </DeltaPill>
+      )}
       <div className="w-10 h-10 rounded-xl bg-emerald-50 text-teal-800 flex items-center justify-center mb-4">
         <Icon size={18} />
       </div>
@@ -121,7 +98,7 @@ function MobileStatCard({ label, value, delta, icon: Icon }) {
         </div>
       </div>
       <div className="text-2xl font-extrabold text-gray-900">{value}</div>
-      <div className="text-xs font-semibold text-emerald-600 mt-1">↑ {delta} from last term</div>
+      {delta && <div className="text-xs font-semibold text-emerald-600 mt-1">\u2191 {delta} from last term</div>}
     </div>
   );
 }
@@ -157,9 +134,9 @@ function MobileHealthCard() {
   );
 }
 
-function ActionRow({ title, subtitle, icon: Icon }) {
+function ActionRow({ title, subtitle, icon: Icon, onClick }) {
   return (
-    <div className="flex items-center gap-3 py-3 cursor-pointer group">
+    <div className="flex items-center gap-3 py-3 cursor-pointer group" onClick={onClick}>
       <div className="w-9 h-9 rounded-lg bg-emerald-50 text-teal-800 flex items-center justify-center flex-none">
         <Icon size={16} />
       </div>
@@ -200,9 +177,122 @@ function NetworkIllustration() {
   );
 }
 
+/* ---------- helpers ---------- */
+
+function getInitials(name) {
+  var parts = (name || "").trim().split(/\s+/);
+  var letters = parts.map(function (p) {
+    return p[0];
+  });
+  return letters.join("").toUpperCase().slice(0, 2) || "A";
+}
+
+var AVATAR_BG = "bg-teal-700";
+var ROLE_STYLE = "bg-teal-50 text-teal-700";
+
 /* ---------- page ---------- */
 
 export default function EduPortalDashboard() {
+  var [stats, setStats] = useState([]);
+  var [admins, setAdmins] = useState([]);
+  var [loading, setLoading] = useState(true);
+  var [error, setError] = useState(null);
+  var [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
+  var [announcementMessage, setAnnouncementMessage] = useState("");
+
+  useEffect(function () {
+    var cancelled = false;
+    async function fetchData() {
+      try {
+        var [allUsers, allCourses] = await Promise.all([getUsers(), getAllCourses()]);
+
+        if (cancelled) return;
+
+        var studentCount = allUsers.filter(function (u) {
+          return u.role === "student";
+        }).length;
+        var facultyCount = allUsers.filter(function (u) {
+          return u.role === "instructor";
+        }).length;
+        var courseCount = allCourses.length;
+
+        setStats([
+          { label: "Total Students", value: String(studentCount), delta: "", deltaType: "" },
+          { label: "Total Faculty", value: String(facultyCount), delta: "", deltaType: "" },
+          { label: "Active Courses", value: String(courseCount), delta: "", deltaType: "" },
+        ]);
+
+        var adminUsers = allUsers.filter(function (u) {
+          return u.role === "admin";
+        });
+        var adminList = adminUsers.map(function (u) {
+          return {
+            name: u.name || "Admin",
+            email: u.email,
+            initials: getInitials(u.name),
+            avatar_bg: AVATAR_BG,
+            role: "Admin",
+            role_style: ROLE_STYLE,
+            last_active: u.last_active || u.updated_at || "\u2014",
+          };
+        });
+        setAdmins(adminList);
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    fetchData();
+    return function () {
+      cancelled = true;
+    };
+  }, []);
+
+  var navigate = useNavigate();
+
+  function handleActionClick(action) {
+    if (action === "announcement") {
+      setShowAnnouncementModal(true);
+    } else {
+      navigate(action);
+    }
+  }
+
+  async function handleSendAnnouncement() {
+    if (!announcementMessage.trim()) return;
+    await supabase.from("notifications").insert({
+      user_id: null,
+      day: "Today",
+      category_id: "system",
+      type: "system",
+      source_label: "System Announcement",
+      title: announcementMessage,
+      description: announcementMessage,
+      time_label: "Just now",
+      action_label: null,
+      read: false,
+    });
+    setAnnouncementMessage("");
+    setShowAnnouncementModal(false);
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 text-gray-900 flex items-center justify-center">
+        <p className="text-gray-500 text-sm">Loading dashboard data...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 text-gray-900 flex items-center justify-center">
+        <p className="text-red-600 text-sm">Error: {error}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <main className="max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-8 pb-14">
@@ -222,8 +312,17 @@ export default function EduPortalDashboard() {
 
         {/* ===== MOBILE ONLY ===== */}
         <div className="md:hidden space-y-4">
-          <MobileStatCard label="Total Students" value="12,450" delta="+3.2%" icon={Users} />
-          <MobileStatCard label="Total Faculty" value="842" delta="+1.5%" icon={GraduationCap} />
+          {stats.map(function (s) {
+            return (
+              <MobileStatCard
+                key={s.label}
+                label={s.label}
+                value={s.value}
+                delta={s.delta}
+                icon={STAT_ICONS[s.label]}
+              />
+            );
+          })}
           <MobileHealthCard />
 
           <div className="bg-white border border-gray-200 rounded-2xl p-4">
@@ -231,9 +330,9 @@ export default function EduPortalDashboard() {
               Quick Actions
             </div>
             <div className="divide-y divide-gray-100">
-              {mobileActions.map((a) => (
-                <ActionRow key={a.title} {...a} />
-              ))}
+              {mobileActions.map(function (a) {
+                return <ActionRow key={a.title} {...a} onClick={function () { handleActionClick(a.action); }} />;
+              })}
             </div>
           </div>
 
@@ -243,9 +342,18 @@ export default function EduPortalDashboard() {
         {/* ===== DESKTOP ONLY ===== */}
         <div className="hidden md:block">
           <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
-            {desktopStats.map((s) => (
-              <DesktopStatCard key={s.label} {...s} />
-            ))}
+            {stats.map(function (s) {
+              return (
+                <DesktopStatCard
+                  key={s.label}
+                  label={s.label}
+                  value={s.value}
+                  delta={s.delta}
+                  deltaType={s.deltaType}
+                  icon={STAT_ICONS[s.label]}
+                />
+              );
+            })}
             <DesktopHealthCard />
           </section>
 
@@ -254,9 +362,9 @@ export default function EduPortalDashboard() {
               <h2 className="text-base font-bold">Quick Actions</h2>
               <p className="text-sm text-gray-500">Frequently used administrative tasks.</p>
               <div className="divide-y divide-gray-100 mt-1">
-                {desktopActions.map((a) => (
-                  <ActionRow key={a.title} {...a} />
-                ))}
+                {desktopActions.map(function (a) {
+                  return <ActionRow key={a.title} {...a} onClick={function () { handleActionClick(a.action); }} />;
+                })}
               </div>
             </div>
 
@@ -266,7 +374,10 @@ export default function EduPortalDashboard() {
                   <h2 className="text-base font-bold">Role Management</h2>
                   <p className="text-sm text-gray-500">Active system administrators and roles.</p>
                 </div>
-                <button className="flex items-center gap-1.5 bg-teal-800 hover:bg-teal-900 text-white text-xs font-semibold px-3.5 py-2 rounded-lg whitespace-nowrap">
+                <button
+                  onClick={function () { navigate("/admin/users"); }}
+                  className="flex items-center gap-1.5 bg-teal-800 hover:bg-teal-900 text-white text-xs font-semibold px-3.5 py-2 rounded-lg whitespace-nowrap"
+                >
                   + Manage Roles
                 </button>
               </div>
@@ -281,40 +392,72 @@ export default function EduPortalDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {admins.map((u) => (
-                    <tr key={u.email} className="border-t border-gray-100">
-                      <td className="py-3">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`w-8 h-8 rounded-full ${u.avatarBg} text-white text-xs font-bold flex items-center justify-center flex-none`}
-                          >
-                            {u.initials}
+                  {admins.map(function (u) {
+                    return (
+                      <tr key={u.email} className="border-t border-gray-100">
+                        <td className="py-3">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`w-8 h-8 rounded-full ${u.avatar_bg} text-white text-xs font-bold flex items-center justify-center flex-none`}
+                            >
+                              {u.initials}
+                            </div>
+                            <div>
+                              <div className="font-semibold text-gray-900">{u.name}</div>
+                              <div className="text-xs text-gray-500">{u.email}</div>
+                            </div>
                           </div>
-                          <div>
-                            <div className="font-semibold text-gray-900">{u.name}</div>
-                            <div className="text-xs text-gray-500">{u.email}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3">
-                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${u.roleStyle}`}>
-                          {u.role}
-                        </span>
-                      </td>
-                      <td className="py-3 text-gray-500">{u.lastActive}</td>
-                      <td className="py-3 text-right">
-                        <button className="text-gray-400 hover:text-gray-600">
-                          <MoreVertical size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="py-3">
+                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${u.role_style}`}>
+                            {u.role}
+                          </span>
+                        </td>
+                        <td className="py-3 text-gray-500">{u.last_active}</td>
+                        <td className="py-3 text-right">
+                          <button className="text-gray-400 hover:text-gray-600">
+                            <MoreVertical size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           </section>
         </div>
       </main>
+
+      {/* ===== System Announcement Modal ===== */}
+      {showAnnouncementModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4">
+            <h2 className="text-lg font-bold text-gray-900 mb-4">System Announcement</h2>
+            <textarea
+              className="w-full border border-gray-300 rounded-lg p-3 text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              rows={4}
+              placeholder="Type your announcement message..."
+              value={announcementMessage}
+              onChange={function (e) { setAnnouncementMessage(e.target.value); }}
+            />
+            <div className="flex justify-end gap-3 mt-4">
+              <button
+                onClick={function () { setShowAnnouncementModal(false); setAnnouncementMessage(""); }}
+                className="px-4 py-2 text-sm font-semibold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSendAnnouncement}
+                className="px-4 py-2 text-sm font-semibold text-white bg-teal-800 rounded-lg hover:bg-teal-900"
+              >
+                Send to All Users
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

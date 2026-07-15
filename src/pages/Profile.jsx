@@ -1,10 +1,29 @@
-import AppLayout from '../components/AppLayout';
+import { updateUser } from '../api/usersApi';
+import { useAuth } from '../context/AuthContext';
 
 import { useState } from 'react';
 
-const imgStudentPhoto = 'https://i.pravatar.cc/256?img=47';
+var AVATAR_COLORS = ['#005c55', '#1a73e8', '#e8710a', '#c5221f', '#7b1fa2', '#007b83', '#d93025', '#188038'];
+function getAvatarColor(name) {
+  if (!name) return AVATAR_COLORS[0];
+  var hash = 0;
+  for (var i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
 
-const TABS = [
+function getInitials(name) {
+  if (!name) return '?';
+  return name.charAt(0).toUpperCase();
+}
+
+function capitalize(str) {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+var TABS = [
   { id: 'personal', label: 'Personal Info' },
   { id: 'security', label: 'Security' },
   { id: 'notifications', label: 'Notifications' },
@@ -59,78 +78,119 @@ function Toggle({ checked, onChange, label, description }) {
 }
 
 export default function ProfileSettings() {
-  const [activeTab, setActiveTab] = useState('personal');
-  const [formData, setFormData] = useState({
-    firstName: 'Sarah',
-    lastName: 'Jenkins',
-    email: 's.jenkins@eduportal.edu',
-    phone: '+1 (555) 123-4567',
-  });
-  const [saved, setSaved] = useState(false);
+  var { user } = useAuth();
 
-  const [passwordForm, setPasswordForm] = useState({
+  var nameParts = (user && user.name) ? user.name.trim().split(' ') : ['', ''];
+  var firstName = nameParts[0] || '';
+  var lastName = nameParts.slice(1).join(' ') || '';
+  var userEmail = (user && user.email) ? user.email : '';
+  var userPhone = (user && user.phone) ? user.phone : '';
+  var userName = (user && user.name) ? user.name : '';
+  var userRole = (user && user.role) ? user.role : '';
+  var avatarColor = getAvatarColor(userName);
+  var initials = getInitials(userName);
+
+  var [activeTab, setActiveTab] = useState('personal');
+  var [formData, setFormData] = useState({
+    firstName: firstName,
+    lastName: lastName,
+    email: userEmail,
+    phone: userPhone,
+  });
+  var [saved, setSaved] = useState(false);
+
+  var [passwordForm, setPasswordForm] = useState({
     current: '',
     next: '',
     confirm: '',
   });
-  const [twoFactor, setTwoFactor] = useState(false);
-  const [securitySaved, setSecuritySaved] = useState(false);
+  var [twoFactor, setTwoFactor] = useState(false);
+  var [securitySaved, setSecuritySaved] = useState(false);
 
-  const [notifications, setNotifications] = useState({
+  var [notifications, setNotifications] = useState({
     grades: true,
     announcements: true,
     schedule: false,
     marketing: false,
   });
 
-  const handleChange = (field) => (e) => {
-    setFormData((prev) => ({ ...prev, [field]: e.target.value }));
-    setSaved(false);
-  };
+  function handleChange(field) {
+    return function (e) {
+      setFormData(function (prev) { return { ...prev, [field]: e.target.value }; });
+      setSaved(false);
+    };
+  }
 
-  const handleSave = (e) => {
+  function handleSave(e) {
     e.preventDefault();
-    // TODO: استبدلها بنداء الـ API بتاعك لتحديث بيانات المستخدم
-    setSaved(true);
-  };
+    if (!user || !user.id) {
+      console.error('No logged-in user ID available');
+      return;
+    }
+    updateUser(user.id, formData).then(function () {
+      setSaved(true);
+    }).catch(function (err) {
+      console.error(err);
+    });
+  }
 
-  const handlePasswordChange = (field) => (e) => {
-    setPasswordForm((prev) => ({ ...prev, [field]: e.target.value }));
-    setSecuritySaved(false);
-  };
+  function handlePasswordChange(field) {
+    return function (e) {
+      setPasswordForm(function (prev) { return { ...prev, [field]: e.target.value }; });
+      setSecuritySaved(false);
+    };
+  }
 
-  const handleSecuritySave = (e) => {
+  function handleSecuritySave(e) {
     e.preventDefault();
     // TODO: استبدلها بنداء الـ API بتاعك لتحديث كلمة السر / الـ 2FA
     setSecuritySaved(true);
     setPasswordForm({ current: '', next: '', confirm: '' });
-  };
+  }
 
-  const toggleNotification = (key) => () => {
-    setNotifications((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
+  function toggleNotification(key) {
+    return function () {
+      setNotifications(function (prev) { return { ...prev, [key]: !prev[key] }; });
+    };
+  }
 
-  const [mobileFormData, setMobileFormData] = useState({
-    firstName: 'Alex',
-    lastName: 'Johnson',
-    universityEmail: 'a.johnson@eduportal.edu',
-    personalEmail: 'alexj.doe@example.com',
-    phone: '+1 (555) 123-4567',
+  var [mobileFormData, setMobileFormData] = useState({
+    firstName: firstName,
+    lastName: lastName,
+    universityEmail: userEmail,
+    personalEmail: '',
+    phone: userPhone,
   });
-  const [mobileTwoFactor, setMobileTwoFactor] = useState(true);
-  const [mobileNotifications, setMobileNotifications] = useState({
+  var [mobileTwoFactor, setMobileTwoFactor] = useState(true);
+  var [mobileNotifications, setMobileNotifications] = useState({
     courseAnnouncements: true,
     gradeUpdates: true,
     assignmentDeadline: false,
   });
 
-  const handleMobileChange = (field) => (e) => {
-    setMobileFormData((prev) => ({ ...prev, [field]: e.target.value }));
-  };
+  function handleMobileChange(field) {
+    return function (e) {
+      setMobileFormData(function (prev) { return { ...prev, [field]: e.target.value }; });
+    };
+  }
 
-  const toggleMobileNotification = (key) => () => {
-    setMobileNotifications((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
+  function toggleMobileNotification(key) {
+    return function () {
+      setMobileNotifications(function (prev) { return { ...prev, [key]: !prev[key] }; });
+    };
+  }
+
+  function handleMobileSave() {
+    if (!user || !user.id) {
+      console.error('No logged-in user ID available');
+      return;
+    }
+    updateUser(user.id, mobileFormData).then(function () {
+      setSaved(true);
+    }).catch(function (err) {
+      console.error(err);
+    });
+  }
 
   return (
     <div className="w-full">
@@ -138,38 +198,39 @@ export default function ProfileSettings() {
       <div className="mx-auto flex w-full max-w-[400px] flex-col items-center gap-[20px] px-4 py-6 lg:hidden">
         {/* Avatar + name */}
         <div className="flex flex-col items-center gap-[6px] text-center">
-          <img
-            src={imgStudentPhoto}
-            alt="Alex Johnson"
-            className="size-[72px] rounded-full border-4 border-[#f9f9ff] object-cover shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]"
-          />
-          <h1 className="text-[18px] font-bold leading-[24px] text-[#111c2d]">Alex Johnson</h1>
-          <p className="text-[13px] leading-[18px] text-[#3e4947]">Computer Science, Year 3</p>
+          <div
+            className="flex size-[72px] shrink-0 items-center justify-center rounded-full border-4 border-[#f9f9ff] text-[28px] font-bold text-white shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]"
+            style={{ backgroundColor: avatarColor }}
+          >
+            {initials}
+          </div>
+          <h1 className="text-[18px] font-bold leading-[24px] text-[#111c2d]">{userName}</h1>
+          <p className="text-[13px] leading-[18px] text-[#3e4947]">{userEmail}</p>
           <span className="mt-[2px] inline-flex items-center gap-[6px] rounded-full border border-[#bfded9] bg-[#e6f4f1] px-[10px] py-[4px] text-[12px] font-semibold text-[#005c55]">
             <svg className="size-[12px]" viewBox="0 0 16 16" fill="none">
               <path d="M3 8.5L6.5 12L13 4.5" stroke="#005c55" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            Enrolled Full-Time
+            {capitalize(userRole)}
           </span>
         </div>
 
         {/* Academic Status */}
         <div className="w-full rounded-[12px] border border-[#bdc9c6] bg-white p-[16px]">
           <h3 className="mb-[10px] text-[11px] font-bold uppercase tracking-[0.6px] text-[#3e4947]">
-            Academic Status
+            Account Info
           </h3>
           <div className="flex flex-col divide-y divide-[#e5e7eb]">
             <div className="flex items-center justify-between py-[8px] text-[13px]">
-              <span className="text-[#3e4947]">Student ID</span>
-              <span className="font-semibold text-[#111c2d]">V0393047</span>
+              <span className="text-[#3e4947]">Role</span>
+              <span className="font-semibold text-[#111c2d]">{capitalize(userRole)}</span>
             </div>
             <div className="flex items-center justify-between py-[8px] text-[13px]">
-              <span className="text-[#3e4947]">Current GPA</span>
-              <span className="font-semibold text-[#111c2d]">3.0</span>
+              <span className="text-[#3e4947]">Email</span>
+              <span className="font-semibold text-[#111c2d] truncate ml-2 max-w-[180px]">{userEmail}</span>
             </div>
             <div className="flex items-center justify-between py-[8px] text-[13px]">
-              <span className="text-[#3e4947]">Expected Grad</span>
-              <span className="font-semibold text-[#111c2d]">May 2026</span>
+              <span className="text-[#3e4947]">Phone</span>
+              <span className="font-semibold text-[#111c2d]">{userPhone || 'N/A'}</span>
             </div>
           </div>
         </div>
@@ -258,7 +319,7 @@ export default function ProfileSettings() {
           <div className="pt-[14px]">
             <Toggle
               checked={mobileTwoFactor}
-              onChange={() => setMobileTwoFactor((prev) => !prev)}
+              onChange={function () { setMobileTwoFactor(function (prev) { return !prev; }); }}
               label="Two-Factor Authentication"
               description={
                 mobileTwoFactor ? 'Currently enabled via Authenticator App' : 'Currently disabled'
@@ -308,6 +369,7 @@ export default function ProfileSettings() {
           </button>
           <button
             type="button"
+            onClick={handleMobileSave}
             className="flex-1 rounded-[8px] bg-[#005c55] px-[16px] py-[10px] text-[14px] font-semibold text-white hover:bg-[#00473f]"
           >
             Save Changes
@@ -332,13 +394,13 @@ export default function ProfileSettings() {
         {/* Settings Sidebar (in-page tabs, not the app sidebar) */}
         <div className="w-full shrink-0 rounded-[12px] border border-[#bdc9c6] bg-white p-[13px] drop-shadow-[0px_1px_1px_rgba(0,0,0,0.05)] lg:w-[256px]">
           <nav className="flex w-full flex-col items-start gap-[8px]">
-            {TABS.map((tab) => {
-              const isActive = activeTab === tab.id;
+            {TABS.map(function (tab) {
+              var isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
                   type="button"
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={function () { setActiveTab(tab.id); }}
                   className={`flex w-full items-center justify-between rounded-[8px] px-[16px] py-[12px] text-left text-[14px] leading-[20px] tracking-[0.14px] transition-colors ${
                     isActive ? 'bg-[#dee8ff] font-bold text-[#005c55]' : 'font-medium text-[#3e4947] hover:bg-[#f9f9ff]'
                   }`}
@@ -358,34 +420,35 @@ export default function ProfileSettings() {
               {/* Profile Header Card */}
               <div className="flex w-full flex-col items-center gap-[24px] rounded-[12px] border border-[#bdc9c6] bg-white p-[25px] text-center drop-shadow-[0px_1px_1px_rgba(0,0,0,0.05)] sm:flex-row sm:items-start sm:text-left">
                 <div className="relative size-[128px] shrink-0 rounded-full border-4 border-[#f9f9ff] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]">
-                  <img
-                    src={imgStudentPhoto}
-                    alt="Sarah Jenkins"
-                    className="size-full rounded-full object-cover"
-                  />
+                  <div
+                    className="flex size-full items-center justify-center rounded-full text-[48px] font-bold text-white"
+                    style={{ backgroundColor: avatarColor }}
+                  >
+                    {initials}
+                  </div>
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col items-start gap-[8px]">
                   <h2 className="w-full text-[24px] font-bold leading-[32px] tracking-[-0.24px] text-[#111c2d]">
-                    Sarah Jenkins
+                    {userName}
                   </h2>
                   <p className="w-full text-[16px] leading-[24px] text-[#005c55]">
-                    B.S. Computer Science
+                    {userEmail}
                   </p>
                   <div className="flex w-full flex-wrap items-start justify-center gap-[16px] whitespace-nowrap pt-[8px] sm:justify-start">
                     <div className="flex shrink-0 flex-col items-start gap-[4px] self-stretch rounded-[8px] border border-[#bdc9c6] bg-[#e7eeff] px-[17px] py-[9px]">
                       <span className="text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#3e4947]">
-                        Student ID
+                        Email
                       </span>
-                      <span className="text-[16px] font-medium leading-[24px] text-[#111c2d]">
-                        #902-11-458
+                      <span className="text-[16px] font-medium leading-[24px] text-[#111c2d] truncate max-w-[220px]">
+                        {userEmail}
                       </span>
                     </div>
                     <div className="flex shrink-0 flex-col items-start gap-[4px] self-stretch rounded-[8px] border border-[#bdc9c6] bg-[#e7eeff] px-[17px] py-[9px]">
                       <span className="text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#3e4947]">
-                        Standing
+                        Role
                       </span>
                       <span className="text-[16px] font-medium leading-[24px] text-[#111c2d]">
-                        Junior
+                        {capitalize(userRole)}
                       </span>
                     </div>
                   </div>
@@ -557,7 +620,7 @@ export default function ProfileSettings() {
                 <div className="w-full px-[24px] py-[8px]">
                   <Toggle
                     checked={twoFactor}
-                    onChange={() => setTwoFactor((prev) => !prev)}
+                    onChange={function () { setTwoFactor(function (prev) { return !prev; }); }}
                     label="Enable two-factor authentication"
                     description="Get a verification code by SMS each time you sign in."
                   />

@@ -1,22 +1,387 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { getCourse, getCourseWeeks, getWeekMaterials, getCourseFiles } from '../api/coursesApi';
+import { getAssignments, getSubmissions, submitAssignment } from '../api/assignmentsApi';
+import { getGradebookEntries } from '../api/gradebookApi';
+import { submissionSchema } from '../validation/assignmentSchema';
+import { useAuth } from '../context/AuthContext';
+
+function formatUpcomingDue(date) {
+  var now = new Date();
+  var target = new Date(date);
+  if (isNaN(target.getTime())) return 'Due ' + date;
+
+  var diffMs = target.getTime() - now.getTime();
+  var diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays <= 0) return 'Due Today, 11:59 PM';
+  if (diffDays === 1) return 'Due Tomorrow, 11:59 PM';
+
+  var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return 'Due ' + months[target.getMonth()] + ' ' + target.getDate();
+}
 
 export default function CourseDetail() {
   const { courseId } = useParams();
-  
-  // Default to CS301 data if the route parameter doesn't match
-  const activeCourseId = courseData[courseId] ? courseId : 'CS301';
-  const course = courseData[activeCourseId];
+  const safeId = courseId ? courseId.toLowerCase() : '';
+  const { user } = useAuth();
 
+  const [course, setCourse] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('Materials');
-  const [expandedWeeks, setExpandedWeeks] = useState({ 4: true }); // Week 4 expanded by default
+  const [expandedWeeks, setExpandedWeeks] = useState({});
 
-  const toggleWeek = (id) => {
-    setExpandedWeeks((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
+  var [assignments, setAssignments] = useState([]);
+  var [assignmentsLoading, setAssignmentsLoading] = useState(false);
+  var [assignmentsError, setAssignmentsError] = useState(null);
+  var [submissionsMap, setSubmissionsMap] = useState({});
+  var [expandedSubmitForm, setExpandedSubmitForm] = useState(null);
+  var [submissionText, setSubmissionText] = useState('');
+  var [submissionFileUrl, setSubmissionFileUrl] = useState('');
+  var [submittingAssignment, setSubmittingAssignment] = useState(null);
+  var [submitError, setSubmitError] = useState(null);
+
+  useEffect(function () {
+    var cancelled = false;
+
+    async function loadCourse() {
+      if (!safeId) {
+        if (!cancelled) {
+          setError('No course ID provided');
+          setLoading(false);
+        }
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        var results = await Promise.all([
+          getCourse(safeId),
+          getCourseWeeks(safeId),
+          getCourseFiles(safeId),
+          getAssignments(safeId),
+        ]);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err.message);
+          setLoading(false);
+        }
+        return;
+      }
+
+      if (cancelled) return;
+
+      var [courseRow, weeksRows, filesRows, assignmentsData] = results;
+
+      var upNext = null;
+      if (assignmentsData && assignmentsData.length > 0) {
+        var now = new Date();
+        var bestAssignment = null;
+        var bestDate = null;
+
+        for (var ai = 0; ai < assignmentsData.length; ai++) {
+          var a = assignmentsData[ai];
+          var dueDate = a.due_date ? new Date(a.due_date) : null;
+          if (!dueDate || isNaN(dueDate.getTime())) continue;
+
+          if (dueDate >= now) {
+            if (!bestDate || dueDate < bestDate) {
+              bestDate = dueDate;
+              bestAssignment = a;
+            }
+          }
+        }
+
+        if (!bestAssignment) {
+          for (var ai2 = 0; ai2 < assignmentsData.length; ai2++) {
+            var a2 = assignmentsData[ai2];
+            var d2 = a2.due_date ? new Date(a2.due_date) : null;
+            if (d2 && !isNaN(d2.getTime())) {
+              bestAssignment = a2;
+              bestDate = d2;
+              break;
+            }
+          }
+        }
+
+        if (!bestAssignment && assignmentsData.length > 0) {
+          bestAssignment = assignmentsData[0];
+          bestDate = new Date();
+        }
+
+        if (bestAssignment) {
+          upNext = {
+            title: bestAssignment.title,
+            due: formatUpcomingDue(bestDate),
+          };
+        }
+      }
+
+      var weeksWithMaterials = [];
+      if (weeksRows && weeksRows.length > 0) {
+        var materialsResults = await Promise.all(
+          weeksRows.map(function (week) {
+            return getWeekMaterials(week.id).then(function (materials) {
+              return { week: week, materials: materials };
+            });
+          })
+        );
+
+        weeksWithMaterials = materialsResults.map(function (item) {
+          return {
+            id: item.week.id,
+            title: item.week.title,
+            dateRange: item.week.date_range,
+            materials: item.materials,
+          };
+        });
+      }
+
+      if (cancelled) return;
+
+      var assembled = {
+        code: courseRow.id,
+        title: courseRow.title,
+        credits: courseRow.credits,
+        description: courseRow.description,
+        department: courseRow.department,
+        term: courseRow.term,
+        instructor: {
+          name: courseRow.instructor_name,
+          role: courseRow.instructor_role,
+          email: courseRow.instructor_email,
+          office: courseRow.instructor_office,
+          hours: courseRow.instructor_hours,
+        },
+        stats: {
+          credits: courseRow.credits,
+          grade: 'N/A',
+        },
+        weeks: weeksWithMaterials,
+        recentFiles: filesRows || [],
+        upNext: upNext,
+      };
+
+      if (!cancelled) {
+        setCourse(assembled);
+        setAssignments(assignmentsData || []);
+        if (assembled.weeks.length > 0) {
+          setExpandedWeeks((function () {
+            var first = assembled.weeks[0];
+            var expanded = {};
+            expanded[first.id] = true;
+            return expanded;
+          })());
+        }
+        setLoading(false);
+      }
+    }
+
+    loadCourse();
+
+    return function () {
+      cancelled = true;
+    };
+  }, [safeId]);
+
+  useEffect(function () {
+    var cancelled = false;
+
+    async function loadGrade() {
+      if (!safeId || !user) return;
+
+      try {
+        var entries = await getGradebookEntries(safeId);
+        if (cancelled) return;
+
+        var userEntries = [];
+        for (var ei = 0; ei < entries.length; ei++) {
+          var entry = entries[ei];
+          if (
+            entry.user_id === user.id ||
+            entry.student_id === user.id ||
+            entry.student_name === user.name
+          ) {
+            userEntries.push(entry);
+          }
+        }
+
+        var grade = 'N/A';
+        if (userEntries.length > 0) {
+          var total = 0;
+          for (var gi = 0; gi < userEntries.length; gi++) {
+            var score = parseFloat(userEntries[gi].score);
+            if (!isNaN(score)) {
+              total += score;
+            }
+          }
+          var avg = Math.round(total / userEntries.length);
+          grade = avg + '%';
+        }
+
+        if (!cancelled) {
+          setCourse(function (prev) {
+            if (!prev) return prev;
+            var updated = { credits: prev.stats.credits, grade: grade };
+            return { ...prev, stats: updated };
+          });
+        }
+      } catch (_err) {
+        // gradebook unavailable — grade stays N/A
+      }
+    }
+
+    loadGrade();
+
+    return function () {
+      cancelled = true;
+    };
+  }, [safeId, user]);
+
+  const toggleWeek = function (id) {
+    setExpandedWeeks(function (prev) {
+      var next = {};
+      var keys = Object.keys(prev);
+      for (var i = 0; i < keys.length; i++) {
+        next[keys[i]] = prev[keys[i]];
+      }
+      next[id] = !prev[id];
+      return next;
+    });
   };
+
+  useEffect(function () {
+    var cancelled = false;
+
+    async function loadSubmissions() {
+      if (!safeId || !user) return;
+      if (assignments.length === 0) return;
+
+      setAssignmentsLoading(true);
+      setAssignmentsError(null);
+
+      try {
+        var submissionsResults = await Promise.all(
+          assignments.map(function (assignment) {
+            return getSubmissions(assignment.id, user.id)
+              .then(function (subs) { return { assignmentId: assignment.id, result: subs }; })
+              .catch(function () { return { assignmentId: assignment.id, result: [] }; });
+          })
+        );
+
+        if (cancelled) return;
+
+        var map = {};
+        for (var i = 0; i < submissionsResults.length; i++) {
+          var item = submissionsResults[i];
+          map[item.assignmentId] = item.result && item.result.length > 0 ? item.result[0] : null;
+        }
+
+        setSubmissionsMap(map);
+      } catch (err) {
+        if (!cancelled) {
+          setAssignmentsError(err.message);
+        }
+      } finally {
+        if (!cancelled) {
+          setAssignmentsLoading(false);
+        }
+      }
+    }
+
+    if (activeTab === 'Assignments') {
+      loadSubmissions();
+    }
+
+    return function () {
+      cancelled = true;
+    };
+  }, [safeId, user, activeTab, assignments]);
+
+  function handleSubmitAssignment(assignmentId) {
+    var validation = submissionSchema.safeParse({ submission_text: submissionText, file_url: submissionFileUrl });
+    if (!validation.success) {
+      setSubmitError(validation.error.errors ? validation.error.errors[0].message : validation.error.issues[0].message);
+      return;
+    }
+
+    setSubmittingAssignment(assignmentId);
+    setSubmitError(null);
+
+    submitAssignment(assignmentId, user.id, submissionText, submissionFileUrl)
+      .then(function (result) {
+        setSubmissionsMap(function (prev) {
+          var next = {};
+          var keys = Object.keys(prev);
+          for (var i = 0; i < keys.length; i++) {
+            next[keys[i]] = prev[keys[i]];
+          }
+          next[assignmentId] = result;
+          return next;
+        });
+        setExpandedSubmitForm(null);
+        setSubmissionText('');
+        setSubmissionFileUrl('');
+        setSubmittingAssignment(null);
+      })
+      .catch(function (err) {
+        setSubmitError(err.message);
+        setSubmittingAssignment(null);
+      });
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-teal-600 border-t-transparent" />
+          <span className="text-sm text-gray-400 font-semibold">Loading course...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="flex flex-col items-center gap-3 text-center max-w-md">
+          <div className="h-12 w-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center">
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <p className="text-sm font-bold text-gray-800">Failed to load course</p>
+          <p className="text-xs text-gray-500">{error}</p>
+          <Link to="/student/courses" className="mt-2 text-xs font-bold text-teal-600 hover:text-teal-700 transition-colors">
+            &larr; Back to My Courses
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!course) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="flex flex-col items-center gap-3">
+          <p className="text-sm font-bold text-gray-800">Course not found</p>
+          <Link to="/student/courses" className="text-xs font-bold text-teal-600 hover:text-teal-700 transition-colors">
+            &larr; Back to My Courses
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  var pendingCount = 0;
+  for (var i = 0; i < assignments.length; i++) {
+    if (!submissionsMap[assignments[i].id]) {
+      pendingCount++;
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -82,24 +447,26 @@ export default function CourseDetail() {
       {/* 3. Sub-tabs layout */}
       <div className="border-b border-gray-150">
         <div className="flex gap-6 overflow-x-auto">
-          {['Overview', 'Materials', 'Assignments', 'Grades'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`pb-3 text-sm font-semibold tracking-tight border-b-2 transition-all shrink-0 cursor-pointer ${
-                activeTab === tab
-                  ? 'border-teal-600 text-teal-600'
-                  : 'border-transparent text-gray-400 hover:text-gray-600'
-              }`}
-            >
-              {tab}
-              {tab === 'Assignments' && (
-                <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-red-100 text-red-600">
-                  1
-                </span>
-              )}
-            </button>
-          ))}
+          {['Overview', 'Materials', 'Assignments', 'Grades'].map(function (tab) {
+            return (
+              <button
+                key={tab}
+                onClick={function () { setActiveTab(tab); }}
+                className={`pb-3 text-sm font-semibold tracking-tight border-b-2 transition-all shrink-0 cursor-pointer ${
+                  activeTab === tab
+                    ? 'border-teal-600 text-teal-600'
+                    : 'border-transparent text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                {tab}
+                {tab === 'Assignments' && pendingCount > 0 && (
+                  <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-red-100 text-red-600">
+                    {pendingCount}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -109,86 +476,90 @@ export default function CourseDetail() {
         <div className="lg:col-span-2 space-y-6">
           {activeTab === 'Materials' && (
             <div className="space-y-4">
-              {course.weeks.map((week) => (
-                <div key={week.id} className="rounded-xl border border-gray-150 bg-white overflow-hidden shadow-2xs">
-                  {/* Accordion Header */}
-                  <div
-                    onClick={() => toggleWeek(week.id)}
-                    className="flex items-center justify-between p-4 bg-gray-50/50 hover:bg-gray-50 border-b border-gray-100 cursor-pointer select-none"
-                  >
-                    <div>
-                      <h3 className="text-sm font-bold text-gray-900">{week.title}</h3>
-                      <p className="text-[10px] font-semibold text-gray-400 mt-0.5">{week.dateRange}</p>
-                    </div>
-                    <button className="text-gray-400">
-                      <svg
-                        className={`h-5 w-5 transform transition-transform duration-200 ${
-                          expandedWeeks[week.id] ? 'rotate-180' : ''
-                        }`}
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                  </div>
-
-                  {/* Accordion Body */}
-                  {expandedWeeks[week.id] && (
-                    <div className="divide-y divide-gray-100">
-                      {week.materials.map((file, fileIdx) => (
-                        <div
-                          key={fileIdx}
-                          className="flex items-center justify-between p-4 hover:bg-gray-50/20 transition-colors gap-4"
+              {course.weeks.map(function (week) {
+                return (
+                  <div key={week.id} className="rounded-xl border border-gray-150 bg-white overflow-hidden shadow-2xs">
+                    {/* Accordion Header */}
+                    <div
+                      onClick={function () { toggleWeek(week.id); }}
+                      className="flex items-center justify-between p-4 bg-gray-50/50 hover:bg-gray-50 border-b border-gray-100 cursor-pointer select-none"
+                    >
+                      <div>
+                        <h3 className="text-sm font-bold text-gray-900">{week.title}</h3>
+                        <p className="text-[10px] font-semibold text-gray-400 mt-0.5">{week.dateRange}</p>
+                      </div>
+                      <button className="text-gray-400">
+                        <svg
+                          className={`h-5 w-5 transform transition-transform duration-200 ${
+                            expandedWeeks[week.id] ? 'rotate-180' : ''
+                          }`}
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth="2"
                         >
-                          <div className="flex items-center gap-3">
-                            {/* File Type Icon */}
-                            <div className="h-10 w-10 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center shrink-0">
-                              {file.type === 'pdf' && (
-                                <svg className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                </svg>
-                              )}
-                              {file.type === 'video' && (
-                                <svg className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                              )}
-                              {file.type === 'code' && (
-                                <svg className="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                                </svg>
-                              )}
-                            </div>
-                            <div>
-                              <p className="text-xs font-bold text-gray-800 leading-tight">{file.name}</p>
-                              <p className="text-[10px] text-gray-400 mt-1">{file.info}</p>
-                            </div>
-                          </div>
-
-                          {/* Action Button */}
-                          {file.action !== 'viewed' && (
-                            <button className="text-gray-400 hover:text-teal-600 transition-colors p-1 rounded-md hover:bg-teal-50 cursor-pointer">
-                              {file.action === 'download' ? (
-                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                </svg>
-                              ) : (
-                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 00-2 2v4a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                </svg>
-                              )}
-                            </button>
-                          )}
-                        </div>
-                      ))}
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
                     </div>
-                  )}
-                </div>
-              ))}
+
+                    {/* Accordion Body */}
+                    {expandedWeeks[week.id] && (
+                      <div className="divide-y divide-gray-100">
+                        {week.materials.map(function (file, fileIdx) {
+                          return (
+                            <div
+                              key={fileIdx}
+                              className="flex items-center justify-between p-4 hover:bg-gray-50/20 transition-colors gap-4"
+                            >
+                              <div className="flex items-center gap-3">
+                                {/* File Type Icon */}
+                                <div className="h-10 w-10 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center shrink-0">
+                                  {file.type === 'pdf' && (
+                                    <svg className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                    </svg>
+                                  )}
+                                  {file.type === 'video' && (
+                                    <svg className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                  )}
+                                  {file.type === 'code' && (
+                                    <svg className="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                                    </svg>
+                                  )}
+                                </div>
+                                <div>
+                                  <p className="text-xs font-bold text-gray-800 leading-tight">{file.name}</p>
+                                  <p className="text-[10px] text-gray-400 mt-1">{file.info}</p>
+                                </div>
+                              </div>
+
+                              {/* Action Button */}
+                              {file.action !== 'viewed' && (
+                                <button className="text-gray-400 hover:text-teal-600 transition-colors p-1 rounded-md hover:bg-teal-50 cursor-pointer">
+                                  {file.action === 'download' ? (
+                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                    </svg>
+                                  ) : (
+                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 00-2 2v4a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                    </svg>
+                                  )}
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -215,26 +586,127 @@ export default function CourseDetail() {
             <div className="rounded-xl border border-gray-150 bg-white p-5 md:p-6 shadow-2xs space-y-4">
               <div className="flex items-center justify-between border-b border-gray-100 pb-2">
                 <h3 className="text-sm font-bold text-gray-900">Assignments</h3>
-                <span className="bg-red-50 text-red-600 px-2 py-0.5 rounded-full text-[9px] font-bold border border-red-100">
-                  1 Pending
-                </span>
+                {pendingCount > 0 && (
+                  <span className="bg-red-50 text-red-600 px-2 py-0.5 rounded-full text-[9px] font-bold border border-red-100">
+                    {pendingCount} Pending
+                  </span>
+                )}
               </div>
-              <div className="p-4 rounded-xl border border-red-100 bg-red-50/30 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-lg bg-red-100 text-red-600 flex items-center justify-center shrink-0">
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-red-800">{course.upNext.title}</h4>
-                    <p className="text-[10px] text-red-600 mt-1">{course.upNext.due}</p>
+
+              {assignmentsLoading && (
+                <div className="flex items-center justify-center py-8">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-teal-600 border-t-transparent" />
+                    <span className="text-xs text-gray-400 font-semibold">Loading assignments...</span>
                   </div>
                 </div>
-                <button className="bg-teal-700 hover:bg-teal-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors shadow-2xs">
-                  Submit
-                </button>
-              </div>
+              )}
+
+              {assignmentsError && !assignmentsLoading && (
+                <div className="p-4 rounded-xl border border-red-100 bg-red-50/30 text-center">
+                  <p className="text-xs font-bold text-red-600">{assignmentsError}</p>
+                </div>
+              )}
+
+              {!assignmentsLoading && !assignmentsError && assignments.length === 0 && (
+                <div className="p-4 text-center">
+                  <p className="text-xs text-gray-400 font-semibold">No assignments for this course yet.</p>
+                </div>
+              )}
+
+              {!assignmentsLoading && !assignmentsError && assignments.map(function (assignment) {
+                var existingSubmission = submissionsMap[assignment.id];
+                var isExpanded = expandedSubmitForm === assignment.id;
+                var isSubmitting = submittingAssignment === assignment.id;
+
+                return (
+                  <div key={assignment.id} className={`p-4 rounded-xl border ${existingSubmission ? 'border-emerald-100 bg-emerald-50/30' : 'border-red-100 bg-red-50/30'}`}>
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`h-9 w-9 rounded-lg ${existingSubmission ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'} flex items-center justify-center shrink-0`}>
+                          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                          </svg>
+                        </div>
+                        <div>
+                          <h4 className={`text-xs font-bold ${existingSubmission ? 'text-emerald-800' : 'text-red-800'}`}>{assignment.title}</h4>
+                          {assignment.description && (
+                            <p className="text-[10px] text-gray-500 mt-0.5">{assignment.description}</p>
+                          )}
+                          <p className={`text-[10px] mt-1 font-semibold ${existingSubmission ? 'text-emerald-600' : 'text-red-600'}`}>
+                            Due: {assignment.due_date}
+                          </p>
+                        </div>
+                      </div>
+                      {existingSubmission ? (
+                        <span className="text-[10px] font-bold text-emerald-600 bg-emerald-100 px-2 py-1 rounded-full border border-emerald-200 shrink-0 whitespace-nowrap">
+                          Submitted &#10003;
+                        </span>
+                      ) : (
+                        <button
+                          onClick={function () {
+                            if (isExpanded) {
+                              setExpandedSubmitForm(null);
+                              setSubmissionText('');
+                              setSubmitError(null);
+                            } else {
+                              setExpandedSubmitForm(assignment.id);
+                              setSubmissionText('');
+                              setSubmitError(null);
+                            }
+                          }}
+                          className="bg-teal-700 hover:bg-teal-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors shadow-2xs shrink-0"
+                        >
+                          Submit
+                        </button>
+                      )}
+                    </div>
+
+                    {isExpanded && (
+                      <div className="space-y-3 pt-3 mt-3 border-t border-gray-100">
+                        {submitError && (
+                          <p className="text-[10px] font-bold text-red-600 bg-red-100 px-2 py-1 rounded">{submitError}</p>
+                        )}
+                        <textarea
+                          value={submissionText}
+                          onChange={function (e) { setSubmissionText(e.target.value); }}
+                          placeholder="Type your submission..."
+                          rows={4}
+                          className="w-full rounded-lg border border-gray-200 p-3 text-xs text-gray-800 placeholder-gray-400 resize-none focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+                        />
+<p className="mt-2 text-[10px] text-gray-400">Or paste a link to your file (Google Drive, Dropbox, etc.):</p>
+<input
+  type="url"
+  value={submissionFileUrl}
+  onChange={function (e) { setSubmissionFileUrl(e.target.value); }}
+  placeholder="https://drive.google.com/..."
+  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+/>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={function () { handleSubmitAssignment(assignment.id); }}
+                            disabled={isSubmitting}
+                            className="bg-teal-700 hover:bg-teal-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors shadow-2xs"
+                          >
+                            {isSubmitting ? 'Submitting...' : 'Submit'}
+                          </button>
+                          <button
+                            onClick={function () {
+                              setExpandedSubmitForm(null);
+                              setSubmissionText('');
+                              setSubmissionFileUrl('');
+                              setSubmitError(null);
+                            }}
+                            className="border border-gray-200 text-gray-600 px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-gray-50 transition-colors cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -316,194 +788,45 @@ export default function CourseDetail() {
           <div className="hidden lg:block rounded-xl border border-gray-150 bg-white p-5 shadow-2xs space-y-4">
             <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Recent Files</h3>
             <div className="space-y-3">
-              {course.recentFiles.map((file, idx) => (
-                <div key={idx} className="flex items-center gap-2.5 hover:bg-gray-50 p-1.5 rounded-lg transition-colors cursor-pointer">
-                  {file.type === 'pdf' ? (
-                    <svg className="h-4.5 w-4.5 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                    </svg>
-                  ) : (
-                    <svg className="h-4.5 w-4.5 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                    </svg>
-                  )}
-                  <span className="text-xs font-bold text-gray-700 truncate">{file.name}</span>
-                </div>
-              ))}
+              {course.recentFiles.map(function (file, idx) {
+                return (
+                  <div key={idx} className="flex items-center gap-2.5 hover:bg-gray-50 p-1.5 rounded-lg transition-colors cursor-pointer">
+                    {file.type === 'pdf' ? (
+                      <svg className="h-4.5 w-4.5 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                    ) : (
+                      <svg className="h-4.5 w-4.5 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                      </svg>
+                    )}
+                    <span className="text-xs font-bold text-gray-700 truncate">{file.name}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
           {/* Card 4: Up Next (Mobile stack equivalent to Assignments teaser) */}
-          <div className="block lg:hidden rounded-xl border border-red-100 bg-red-50/50 p-5 shadow-2xs space-y-3">
-            <h3 className="text-[10px] font-bold text-red-800 uppercase tracking-wider">Up Next</h3>
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-bold">
-                !
+          {course.upNext && (
+            <div className="block lg:hidden rounded-xl border border-red-100 bg-red-50/50 p-5 shadow-2xs space-y-3">
+              <h3 className="text-[10px] font-bold text-red-800 uppercase tracking-wider">Up Next</h3>
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-bold">
+                  !
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-red-900">{course.upNext.title}</h4>
+                  <p className="text-[10px] text-red-600 font-semibold mt-0.5">{course.upNext.due}</p>
+                </div>
               </div>
-              <div>
-                <h4 className="text-xs font-bold text-red-900">{course.upNext.title}</h4>
-                <p className="text-[10px] text-red-600 font-semibold mt-0.5">{course.upNext.due}</p>
-              </div>
+              <button className="w-full mt-2 bg-white border border-gray-200 text-gray-700 py-1.5 rounded-lg text-xs font-semibold hover:bg-gray-50 transition-colors shadow-2xs cursor-pointer">
+                View Course Calendar
+              </button>
             </div>
-            <button className="w-full mt-2 bg-white border border-gray-200 text-gray-700 py-1.5 rounded-lg text-xs font-semibold hover:bg-gray-50 transition-colors shadow-2xs cursor-pointer">
-              View Course Calendar
-            </button>
-          </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
-
-// Course Detail Database Mock
-const courseData = {
-  CS301: {
-    code: 'CS301',
-    title: 'Data Structures & Algorithms',
-    credits: 4,
-    description: 'Advanced concepts in data structures including trees, graphs, and hash tables. CS301 focuses on practical implementation and complexity analysis.',
-    department: 'COMPUTER SCIENCE',
-    term: 'Fall 2024',
-    instructor: {
-      name: 'Prof. Alan Turing',
-      role: 'Lead Instructor',
-      email: 'a.turing@eduportal.edu',
-      office: 'Science Bldg, Room 404',
-      hours: 'Tue/Thu 2:00 PM - 4:00 PM'
-    },
-    stats: {
-      credits: 4,
-      grade: '92% (A-)'
-    },
-    weeks: [
-      {
-        id: 4,
-        title: 'Week 4: Trees and Graphs',
-        dateRange: 'Sept 18 - Sept 24',
-        materials: [
-          {
-            type: 'pdf',
-            name: 'Binary Search Trees.pdf',
-            info: '2.4 MB • Read by Friday',
-            action: 'download'
-          },
-          {
-            type: 'video',
-            name: 'Lecture Recording: AVL Trees',
-            info: 'Video • 45 mins',
-            action: 'play'
-          },
-          {
-            type: 'code',
-            name: 'Starter Code: BST Implementation',
-            info: 'ZIP Archive • 120 KB',
-            action: 'download'
-          }
-        ]
-      },
-      {
-        id: 3,
-        title: 'Week 3: Linked Lists & Stacks',
-        dateRange: 'Sept 11 - Sept 17',
-        materials: [
-          {
-            type: 'pdf',
-            name: 'Hash Tables Overview.pdf',
-            info: '1.8 MB • Viewed',
-            action: 'viewed'
-          }
-        ]
-      }
-    ],
-    recentFiles: [
-      { name: 'Syllabus_Fall24.pdf', type: 'pdf' },
-      { name: 'graph_traversal.py', type: 'code' }
-    ],
-    upNext: {
-      title: 'Project 2: Graph Router',
-      due: 'Due Tomorrow, 11:59 PM'
-    }
-  },
-  MAT201: {
-    code: 'MAT201',
-    title: 'Calculus II & Linear Algebra',
-    credits: 4,
-    description: 'Techniques of integration, sequences, infinite series, and vector spaces. Connects mathematical frameworks with computer applications.',
-    department: 'MATHEMATICS',
-    term: 'Fall 2024',
-    instructor: {
-      name: 'Dr. Katherine Johnson',
-      role: 'Professor of Mathematics',
-      email: 'k.johnson@eduportal.edu',
-      office: 'Science Bldg, Room 502',
-      hours: 'Mon/Wed 1:00 PM - 3:00 PM'
-    },
-    stats: {
-      credits: 4,
-      grade: '88% (B+)'
-    },
-    weeks: [
-      {
-        id: 4,
-        title: 'Week 4: Infinite Series',
-        dateRange: 'Sept 18 - Sept 24',
-        materials: [
-          {
-            type: 'pdf',
-            name: 'Taylor Series Expansion.pdf',
-            info: '1.5 MB • Read by Friday',
-            action: 'download'
-          }
-        ]
-      }
-    ],
-    recentFiles: [
-      { name: 'Syllabus_Math201.pdf', type: 'pdf' }
-    ],
-    upNext: {
-      title: 'Homework 3: Convergence Tests',
-      due: 'Due Friday, 11:59 PM'
-    }
-  },
-  PHY105: {
-    code: 'PHY105',
-    title: 'General Physics & Quantum Mechanics',
-    credits: 4,
-    description: 'Mechanics, heat, sound, and quantum physics foundations. Includes laboratory experiments and simulation analyses.',
-    department: 'PHYSICS',
-    term: 'Fall 2024',
-    instructor: {
-      name: 'Prof. Richard Feynman',
-      role: 'Lead Instructor',
-      email: 'r.feynman@eduportal.edu',
-      office: 'Science Bldg, Room 301',
-      hours: 'Fri 10:00 AM - 12:00 PM'
-    },
-    stats: {
-      credits: 4,
-      grade: '95% (A)'
-    },
-    weeks: [
-      {
-        id: 4,
-        title: 'Week 4: Quantum Mechanics Intro',
-        dateRange: 'Sept 18 - Sept 24',
-        materials: [
-          {
-            type: 'pdf',
-            name: 'Double Slit Experiment Notes.pdf',
-            info: '3.1 MB • Read by Friday',
-            action: 'download'
-          }
-        ]
-      }
-    ],
-    recentFiles: [
-      { name: 'Syllabus_Phys105.pdf', type: 'pdf' }
-    ],
-    upNext: {
-      title: 'Lab Report 1: Mechanics',
-      due: 'Due Monday, 11:59 PM'
-    }
-  }
-};

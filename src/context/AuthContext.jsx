@@ -1,50 +1,60 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '../lib/supabaseClient';
 
-const AuthContext = createContext(null);
-const STORAGE_KEY = 'spd_user';
+var AuthContext = createContext(null);
+var STORAGE_KEY = 'spd_user';
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  var [user, setUser] = useState(null);
+  var [loading, setLoading] = useState(true);
 
   // When the app first loads, check if we already saved a user before.
-  // This runs one time only, because of the empty [] at the end.
-  useEffect(() => {
-    const savedUser = localStorage.getItem(STORAGE_KEY);
-
+  useEffect(function () {
+    var savedUser = localStorage.getItem(STORAGE_KEY);
     if (savedUser) {
       setUser(JSON.parse(savedUser));
     }
-
     setLoading(false);
   }, []);
 
-  // Mock login implementation
+  // Login against the real Supabase users table with password check.
   async function login(email, password) {
-    // Simulate a brief network delay (e.g., 500ms) for a realistic feel
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    var _a = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .maybeSingle();
 
-    if (password !== '123456') {
+    if (_a.error) {
+      throw new Error('Something went wrong. Please try again.');
+    }
+
+    var dbUser = _a.data;
+
+    if (!dbUser) {
+      throw new Error('No account found with that email.');
+    }
+
+    if (dbUser.password !== password) {
       throw new Error('Invalid email or password.');
     }
 
-    let role = '';
-    let name = '';
+    var authenticatedUser = {
+      id: dbUser.id,
+      email: dbUser.email,
+      role: dbUser.role,
+      name: dbUser.name,
+      phone: dbUser.phone,
+      bio: dbUser.bio,
+    };
 
-    if (email === 'student@depi.com') {
-      role = 'student';
-      name = 'John Student';
-    } else if (email === 'instructor@depi.com') {
-      role = 'instructor';
-      name = 'Jane Instructor';
-    } else if (email === 'admin@depi.com') {
-      role = 'admin';
-      name = 'System Admin';
-    } else {
-      throw new Error('User not found. Use one of the demo emails.');
-    }
+    // Update last_login
+    supabase
+      .from('users')
+      .update({ last_login: 'Just now' })
+      .eq('id', dbUser.id)
+      .then(function () {});
 
-    const authenticatedUser = { email, role, name };
     setUser(authenticatedUser);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(authenticatedUser));
     return authenticatedUser;
@@ -55,14 +65,14 @@ export function AuthProvider({ children }) {
     localStorage.removeItem(STORAGE_KEY);
   }
 
-  const isLoggedIn = user !== null;
+  var isLoggedIn = user !== null;
 
-  const authValue = {
-    user,
-    loading,
-    isLoggedIn,
-    login,
-    logout,
+  var authValue = {
+    user: user,
+    loading: loading,
+    isLoggedIn: isLoggedIn,
+    login: login,
+    logout: logout,
   };
 
   return (

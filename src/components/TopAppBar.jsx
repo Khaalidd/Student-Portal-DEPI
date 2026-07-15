@@ -1,13 +1,24 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getNotifications } from '../api/notificationsApi';
 
 export default function TopAppBar({ onMenuClick }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [recentNotifs, setRecentNotifs] = useState([]);
 
-  const handleLogout = () => {
+  useEffect(function () {
+    getNotifications(user ? user.id : null)
+      .then(function (data) {
+        setRecentNotifs(data.slice(0, 3));
+      })
+      .catch(function () {});
+  }, [user && user.id]);
+
+  const handleLogout = function () {
     logout();
     navigate('/login');
   };
@@ -45,13 +56,50 @@ export default function TopAppBar({ onMenuClick }) {
 
       {/* Right side: Notifications, Grid icon, Profile dropdown */}
       <div className="flex items-center gap-2 md:gap-4">
-        {/* Notification Bell */}
-        <button className="relative rounded-lg p-1.5 text-gray-500 hover:bg-gray-100">
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-          </svg>
-          <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
-        </button>
+        {/* Notification Bell with Dropdown */}
+        <div className="relative">
+          <button
+            onClick={function () { setNotifOpen(!notifOpen); setDropdownOpen(false); }}
+            className="relative rounded-lg p-1.5 text-gray-500 hover:bg-gray-100"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            {recentNotifs.length > 0 && (
+              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
+            )}
+          </button>
+
+          {notifOpen && (
+            <>
+              <div onClick={function () { setNotifOpen(false); }} className="fixed inset-0 z-10" />
+              <div className="absolute right-0 mt-2 w-80 rounded-lg border border-gray-150 bg-white shadow-lg z-20 overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <p className="text-sm font-semibold text-gray-800">Notifications</p>
+                </div>
+                <div className="max-h-64 overflow-y-auto">
+                  {recentNotifs.length === 0 && (
+                    <p className="px-4 py-6 text-center text-xs text-gray-400">No notifications yet.</p>
+                  )}
+                  {recentNotifs.map(function (n) {
+                    return (
+                      <div key={n.id} className="px-4 py-3 border-b border-gray-50 hover:bg-gray-50">
+                        <p className="text-xs font-semibold text-gray-700">{n.title}</p>
+                        <p className="text-[10px] text-gray-400 mt-0.5">{n.time_label} • {n.source_label}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+                <button
+                  onClick={function () { setNotifOpen(false); navigate('/notifications'); }}
+                  className="w-full px-4 py-2.5 text-center text-xs font-semibold text-teal-600 hover:bg-teal-50 border-t border-gray-100"
+                >
+                  Go to Notification Center
+                </button>
+              </div>
+            </>
+          )}
+        </div>
 
         {/* Grid Icon (Desktop Only) */}
         <button className="hidden md:block rounded-lg p-1.5 text-gray-500 hover:bg-gray-100">
@@ -63,41 +111,32 @@ export default function TopAppBar({ onMenuClick }) {
         {/* Profile Avatar & Dropdown */}
         <div className="relative">
           <button
-            onClick={() => setDropdownOpen(!dropdownOpen)}
+            onClick={function () { setDropdownOpen(!dropdownOpen); setNotifOpen(false); }}
             className="flex items-center gap-2 focus:outline-hidden"
           >
             <div className="h-8 w-8 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold text-xs hover:ring-2 hover:ring-teal-200 transition-all">
-              {user?.name ? user.name.split(' ').map(n => n[0]).join('') : 'U'}
+              {user && user.name ? user.name.split(' ').map(function (n) { return n[0]; }).join('') : 'U'}
             </div>
           </button>
 
           {dropdownOpen && (
             <>
-              {/* Overlay transparent to close dropdown */}
-              <div onClick={() => setDropdownOpen(false)} className="fixed inset-0 z-10" />
-              
-              {/* Dropdown Menu */}
+              <div onClick={function () { setDropdownOpen(false); }} className="fixed inset-0 z-10" />
               <div className="absolute right-0 mt-2 w-48 rounded-lg border border-gray-150 bg-white py-1 shadow-md z-20">
                 <div className="px-4 py-2 border-b border-gray-100">
-                  <p className="text-xs font-semibold text-gray-800">{user?.name || 'Guest User'}</p>
-                  <p className="text-[10px] text-gray-400 capitalize">{user?.role || 'Guest'}</p>
+                  <p className="text-xs font-semibold text-gray-800">{user && user.name ? user.name : 'Guest User'}</p>
+                  <p className="text-[10px] text-gray-400 capitalize">{user && user.role ? user.role : 'Guest'}</p>
                 </div>
-                
+
                 <button
-                  onClick={() => {
-                    setDropdownOpen(false);
-                    navigate('/profile');
-                  }}
+                  onClick={function () { setDropdownOpen(false); navigate('/profile'); }}
                   className="flex w-full items-center px-4 py-2 text-left text-xs text-gray-700 hover:bg-gray-50"
                 >
                   My Profile
                 </button>
-                
+
                 <button
-                  onClick={() => {
-                    setDropdownOpen(false);
-                    handleLogout();
-                  }}
+                  onClick={handleLogout}
                   className="flex w-full items-center px-4 py-2 text-left text-xs text-red-600 hover:bg-red-50 border-t border-gray-100"
                 >
                   Sign Out
