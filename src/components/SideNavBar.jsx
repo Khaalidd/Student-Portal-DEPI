@@ -193,7 +193,7 @@ export default function SideNavBar({ isOpen, onClose }) {
         },
         {
           label: "Courses",
-          to: "/instructor/courses/:courseId",
+          to: "/instructor/courses",
           icon: (
             <svg
               className="w-5 h-5"
