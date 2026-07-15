@@ -1,4 +1,4 @@
-import { updateUser } from "../api/usersApi";
+import { updateUser, changeUserPassword } from "../api/usersApi";
 import { useAuth } from "../context/AuthContext";
 
 import { useState } from "react";
@@ -119,6 +119,8 @@ export default function ProfileSettings() {
   });
   var [twoFactor, setTwoFactor] = useState(false);
   var [securitySaved, setSecuritySaved] = useState(false);
+  var [securityError, setSecurityError] = useState("");
+  var [showMobilePasswordForm, setShowMobilePasswordForm] = useState(false);
 
   var [notifications, setNotifications] = useState({
     grades: true,
@@ -162,9 +164,43 @@ export default function ProfileSettings() {
 
   function handleSecuritySave(e) {
     e.preventDefault();
-    // TODO: استبدلها بنداء الـ API بتاعك لتحديث كلمة السر / الـ 2FA
-    setSecuritySaved(true);
-    setPasswordForm({ current: "", next: "", confirm: "" });
+    setSecurityError("");
+    setSecuritySaved(false);
+
+    if (!passwordForm.current || !passwordForm.next || !passwordForm.confirm) {
+      setSecurityError("All password fields are required.");
+      return;
+    }
+
+    if (passwordForm.next !== passwordForm.confirm) {
+      setSecurityError("New passwords do not match.");
+      return;
+    }
+
+    if (passwordForm.next.length < 6) {
+      setSecurityError("New password must be at least 6 characters long.");
+      return;
+    }
+
+    if (passwordForm.current === passwordForm.next) {
+      setSecurityError("New password cannot be the same as the current password.");
+      return;
+    }
+
+    if (!user || !user.id) {
+      setSecurityError("No logged-in user ID available.");
+      return;
+    }
+
+    changeUserPassword(user.id, passwordForm.current, passwordForm.next)
+      .then(function () {
+        setSecuritySaved(true);
+        setSecurityError("");
+        setPasswordForm({ current: "", next: "", confirm: "" });
+      })
+      .catch(function (err) {
+        setSecurityError(err.message || "Failed to update password.");
+      });
   }
 
   function toggleNotification(key) {
@@ -400,11 +436,71 @@ export default function ProfileSettings() {
             </div>
             <button
               type="button"
+              onClick={function () {
+                setShowMobilePasswordForm(function (prev) { return !prev; });
+                setSecurityError("");
+                setSecuritySaved(false);
+              }}
               className="shrink-0 rounded-[8px] border border-[#005c55] px-[12px] py-[6px] text-[12px] font-semibold text-[#005c55] hover:bg-[#e6f4f1]"
             >
-              Update Password
+              {showMobilePasswordForm ? "Cancel" : "Update Password"}
             </button>
           </div>
+
+          {showMobilePasswordForm && (
+            <form onSubmit={handleSecuritySave} className="flex flex-col gap-[12px] border-b border-[#e5e7eb] py-[14px]">
+              <div className="flex flex-col gap-[4px]">
+                <label className="text-[12px] font-medium text-[#3e4947]">
+                  Current Password
+                </label>
+                <input
+                  type="password"
+                  value={passwordForm.current}
+                  onChange={handlePasswordChange("current")}
+                  placeholder="••••••••"
+                  className="w-full rounded-[6px] border border-[#bdc9c6] bg-[#f9f9ff] px-[12px] py-[8px] text-[14px] text-[#111c2d] outline-none focus:border-[#005c55] focus:ring-1 focus:ring-[#005c55]"
+                />
+              </div>
+              <div className="flex flex-col gap-[4px]">
+                <label className="text-[12px] font-medium text-[#3e4947]">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  value={passwordForm.next}
+                  onChange={handlePasswordChange("next")}
+                  placeholder="••••••••"
+                  className="w-full rounded-[6px] border border-[#bdc9c6] bg-[#f9f9ff] px-[12px] py-[8px] text-[14px] text-[#111c2d] outline-none focus:border-[#005c55] focus:ring-1 focus:ring-[#005c55]"
+                />
+              </div>
+              <div className="flex flex-col gap-[4px]">
+                <label className="text-[12px] font-medium text-[#3e4947]">
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  value={passwordForm.confirm}
+                  onChange={handlePasswordChange("confirm")}
+                  placeholder="••••••••"
+                  className="w-full rounded-[6px] border border-[#bdc9c6] bg-[#f9f9ff] px-[12px] py-[8px] text-[14px] text-[#111c2d] outline-none focus:border-[#005c55] focus:ring-1 focus:ring-[#005c55]"
+                />
+              </div>
+
+              {securityError && (
+                <p className="text-[12px] font-semibold text-[#c5221f]">{securityError}</p>
+              )}
+              {securitySaved && (
+                <p className="text-[12px] font-semibold text-[#005c55]">Password updated successfully!</p>
+              )}
+
+              <button
+                type="submit"
+                className="w-full rounded-[8px] bg-[#005c55] py-[8px] text-[12px] font-semibold text-white hover:bg-[#00473f]"
+              >
+                Save Password
+              </button>
+            </form>
+          )}
 
           <div className="pt-[14px]">
             <Toggle
@@ -713,6 +809,11 @@ export default function ProfileSettings() {
                   </div>
 
                   <div className="flex w-full items-center justify-end gap-3 border-t border-[#bdc9c6] bg-[#f9f9ff] px-[24px] pb-[16px] pt-[17px]">
+                    {securityError && (
+                      <span className="text-[12px] font-semibold text-[#c5221f]">
+                        {securityError}
+                      </span>
+                    )}
                     {securitySaved && (
                       <span className="text-[12px] font-semibold text-[#005c55]">
                         Password updated
