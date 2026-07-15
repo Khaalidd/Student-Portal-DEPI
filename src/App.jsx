@@ -26,6 +26,7 @@ import Gradebook from './pages/Gradebook';
 // Admin
 import AdminDashboard from './pages/AdminDashboard';
 import UserManagement from './pages/UserManagement';
+import AdminCourseCreate from './pages/AdminCourseCreate';
 
 export default function App() {
   return (
@@ -59,11 +60,13 @@ export default function App() {
             <Route element={<ProtectedRoute role="admin" />}>
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/users" element={<UserManagement />} />
+              <Route path="/admin/courses/new" element={<AdminCourseCreate />} />
             </Route>
 
 
             <Route element={<ProtectedRoute />}>
               <Route path="/profile" element={<Profile />} />
+              <Route path="/notifications" element={<Notifications />} />
             </Route>
 
           </Route>

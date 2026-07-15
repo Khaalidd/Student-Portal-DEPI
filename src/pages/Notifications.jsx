@@ -1,67 +1,14 @@
 // Notifications.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getNotifications, markAllNotificationsRead } from '../api/notificationsApi';
+import { useAuth } from '../context/AuthContext';
 
-// All the categories shown in the filter panel on the left.
-// "count" is just the number badge next to each category name.
+// Categories are static UI filters, not fetched data.
 const CATEGORIES = [
-  { id: 'all', label: 'All Updates', count: 12 },
-  { id: 'academic', label: 'Academic', count: 5 },
-  { id: 'events', label: 'Campus Events', count: 4 },
-  { id: 'system', label: 'System', count: 3 },
-];
-
-// Each notification knows which day it belongs to ("Today" / "Yesterday"),
-// which category it belongs to (must match a CATEGORIES id above),
-// and a "type" that controls its color (urgent, success, system, event).
-const INITIAL_NOTIFICATIONS = [
-  {
-    id: 1,
-    day: 'Today',
-    categoryId: 'academic',
-    type: 'urgent',
-    sourceLabel: 'Academic • Computer Science 301',
-    title: 'Missing Assignment: Final Project Draft',
-    description:
-      "Your submission for 'Final Project Draft' is past due. Late penalty of 10% per day will be applied. Please submit immediately.",
-    time: '2h ago',
-    actionLabel: 'Submit Now',
-    read: false,
-  },
-  {
-    id: 2,
-    day: 'Today',
-    categoryId: 'academic',
-    type: 'success',
-    sourceLabel: 'Academic • History 101',
-    title: 'New Grade Posted: Midterm Essay',
-    description: "Prof. Anderson has graded your submission 'Midterm Essay'.",
-    time: '5h ago',
-    read: false,
-  },
-  {
-    id: 3,
-    day: 'Today',
-    categoryId: 'system',
-    type: 'system',
-    sourceLabel: 'System Update',
-    title: 'Scheduled Maintenance',
-    description:
-      'EduPortal will be down for scheduled maintenance on Sunday, Oct 15th from 2:00 AM to 4:00 AM EST.',
-    time: '8h ago',
-    read: true,
-  },
-  {
-    id: 4,
-    day: 'Yesterday',
-    categoryId: 'events',
-    type: 'event',
-    sourceLabel: 'Campus Event',
-    title: 'Career Fair Registration Open',
-    description:
-      'Register now for the Fall Career Fair in the Student Union building. Over 50 companies attending.',
-    time: 'Yesterday',
-    read: true,
-  },
+  { id: 'all', label: 'All Updates' },
+  { id: 'academic', label: 'Academic' },
+  { id: 'events', label: 'Campus Events' },
+  { id: 'system', label: 'System' },
 ];
 
 // Colors for each notification "type". Keeping this in one place means
@@ -127,7 +74,7 @@ function NotificationCard({ notification }) {
               URGENT
             </span>
           )}
-          <span className="text-xs font-semibold text-gray-600">{notification.sourceLabel}</span>
+          <span className="text-xs font-semibold text-gray-600">{notification.source_label}</span>
         </div>
 
         <h3 className="text-base font-semibold text-gray-900 sm:text-lg">
@@ -136,44 +83,89 @@ function NotificationCard({ notification }) {
 
         <p className="mt-1 text-sm text-gray-600">{notification.description}</p>
 
-        {notification.actionLabel && (
+        {notification.action_label && (
           <button className="mt-3 rounded-lg bg-teal-800 px-4 py-2 text-sm font-medium text-white hover:bg-teal-900">
-            {notification.actionLabel}
+            {notification.action_label}
           </button>
         )}
       </div>
 
       {/* Time, shown on its own on the right on larger screens */}
       <div className="hidden shrink-0 text-xs font-bold text-teal-800 sm:block">
-        {notification.time}
+        {notification.time_label}
       </div>
     </div>
   );
 }
 
 export default function Notifications() {
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  var { user } = useAuth();
+  var [notifications, setNotifications] = useState([]);
+  var [loading, setLoading] = useState(true);
+  var [error, setError] = useState('');
+  var [selectedCategory, setSelectedCategory] = useState('all');
+
+  // Fetch notifications on mount, filtered by the logged-in user
+  useEffect(function fetchNotifications() {
+    setLoading(true);
+    getNotifications(user ? user.id : null)
+      .then(function (data) {
+        setNotifications(data);
+        setError('');
+      })
+      .catch(function (err) {
+        setError(err.message);
+      })
+      .finally(function () {
+        setLoading(false);
+      });
+  }, []);
+
+  // Compute category counts from the actual fetched data
+  const categoryCounts = {};
+  for (var i = 0; i < notifications.length; i++) {
+    var catId = notifications[i].category_id;
+    categoryCounts[catId] = (categoryCounts[catId] || 0) + 1;
+  }
+
+  var categoriesWithCounts = CATEGORIES.map(function (cat) {
+    var count = cat.id === 'all' ? notifications.length : (categoryCounts[cat.id] || 0);
+    return { id: cat.id, label: cat.label, count: count };
+  });
 
   // How many urgent + unread notifications there are, for the subtitle text.
-  const unreadUrgentCount = notifications.filter(
-    (n) => n.type === 'urgent' && !n.read
+  var unreadUrgentCount = notifications.filter(
+    function (n) { return n.type === 'urgent' && !n.read; }
   ).length;
 
-  function handleMarkAllAsRead() {
-    const updatedNotifications = notifications.map((n) => ({ ...n, read: true }));
-    setNotifications(updatedNotifications);
+  async function handleMarkAllAsRead() {
+    try {
+      await markAllNotificationsRead(user ? user.id : null);
+      setNotifications(function (prev) {
+        return prev.map(function (n) { return { ...n, read: true }; });
+      });
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   // If "All Updates" is selected, show everything. Otherwise only show
-  // notifications whose categoryId matches the selected category.
-  const visibleNotifications =
+  // notifications whose category_id matches the selected category.
+  var visibleNotifications =
     selectedCategory === 'all'
       ? notifications
-      : notifications.filter((n) => n.categoryId === selectedCategory);
+      : notifications.filter(function (n) { return n.category_id === selectedCategory; });
 
-  const todayNotifications = visibleNotifications.filter((n) => n.day === 'Today');
-  const yesterdayNotifications = visibleNotifications.filter((n) => n.day === 'Yesterday');
+  var todayNotifications = visibleNotifications.filter(function (n) { return n.day === 'Today'; });
+  var yesterdayNotifications = visibleNotifications.filter(function (n) { return n.day === 'Yesterday'; });
+
+  if (loading) {
+    return <p className="text-sm text-gray-500">Loading notifications...</p>;
+  }
+
+  if (error) {
+    return <p className="text-sm text-red-600">Error: {error}</p>;
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -203,12 +195,12 @@ export default function Notifications() {
           </h2>
           {/* Horizontal scrolling row on mobile, vertical list on large screens */}
           <div className="mt-2 flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
-            {CATEGORIES.map((category) => {
-              const isActive = category.id === selectedCategory;
+            {categoriesWithCounts.map(function (category) {
+              var isActive = category.id === selectedCategory;
               return (
                 <button
                   key={category.id}
-                  onClick={() => setSelectedCategory(category.id)}
+                  onClick={function () { setSelectedCategory(category.id); }}
                   className={`flex shrink-0 items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap
                     ${isActive ? 'bg-teal-50 text-teal-800' : 'text-gray-600 hover:bg-gray-50'}`}
                 >
@@ -233,9 +225,9 @@ export default function Notifications() {
                 Today
               </h2>
               <div className="flex flex-col gap-3">
-                {todayNotifications.map((notification) => (
-                  <NotificationCard key={notification.id} notification={notification} />
-                ))}
+                {todayNotifications.map(function (notification) {
+                  return <NotificationCard key={notification.id} notification={notification} />;
+                })}
               </div>
             </div>
           )}
@@ -246,9 +238,9 @@ export default function Notifications() {
                 Yesterday
               </h2>
               <div className="flex flex-col gap-3">
-                {yesterdayNotifications.map((notification) => (
-                  <NotificationCard key={notification.id} notification={notification} />
-                ))}
+                {yesterdayNotifications.map(function (notification) {
+                  return <NotificationCard key={notification.id} notification={notification} />;
+                })}
               </div>
             </div>
           )}

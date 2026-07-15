@@ -1,68 +1,148 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { getCourse, getCourseStudents, getCourseSessions } from "../api/coursesApi";
+import { getAssignments, createAssignment, deleteAssignment } from "../api/assignmentsApi";
+import { assignmentSchema } from "../validation/assignmentSchema";
 
-const COURSES = {
-  cs301: {
-    title: "CS301: Advanced Data Structures",
-    meta: "Fall 2024 • Sec 01 • Mon/Wed 10:00 AM",
-  },
-  cs101: {
-    title: "CS101: Intro to Programming",
-    meta: "Fall 2024 • Sec 02 • Tue/Thu 2:00 PM",
-  },
-};
-
-const STUDENTS = [
-  { id: "1029384", name: "Alice Smith", initials: "AS", status: "Active" },
-  { id: "1029385", name: "Bob Johnson", initials: "BJ", status: "Active" },
-  { id: "1029386", name: "Charlie Davis", initials: "CD", status: "At Risk" },
-  { id: "1029387", name: "Eva Evans", initials: "EE", status: "Active" },
-  { id: "1029388", name: "Frank Wright", initials: "FW", status: "Active" },
-];
-
-const MANAGEMENT_ACTIONS = [
+let MANAGEMENT_ACTIONS = [
   { label: "New Assignment", icon: "📝" },
   { label: "Announcement", icon: "📢" },
   { label: "Gradebook", icon: "🎓", to: "/gradebook" },
   { label: "Settings", icon: "⚙️" },
 ];
 
-const SESSIONS = [
-  {
-    date: { month: "OCT", day: "14" },
-    title: "Lec 12: B-Trees & Heaps",
-    meta: "10:00 AM • Rm 402",
-    tone: "default",
-  },
-  {
-    date: { month: "OCT", day: "16" },
-    title: "Lec 13: Graph Algorithms",
-    meta: "10:00 AM • Rm 402",
-    tone: "default",
-  },
-  {
-    date: { month: "OCT", day: "18" },
-    title: "Midterm Examination",
-    meta: "Requires Action",
-    tone: "alert",
-  },
-];
-
 export default function CourseManagement() {
-  const { courseId = "cs301" } = useParams();
-  const navigate = useNavigate();
+  let { courseId = "cs301" } = useParams();
+  let navigate = useNavigate();
 
-  const [filter, setFilter] = useState("");
+  let [filter, setFilter] = useState("");
+  let [course, setCourse] = useState(null);
+  let [students, setStudents] = useState([]);
+  let [sessions, setSessions] = useState([]);
+  let [assignments, setAssignments] = useState([]);
+  let [loading, setLoading] = useState(true);
+  let [error, setError] = useState(null);
+  let [showAssignForm, setShowAssignForm] = useState(false);
+  let [assignForm, setAssignForm] = useState({ title: "", description: "", due_date: "" });
+  let [assignError, setAssignError] = useState(null);
+  let assignmentsRef = useRef(null);
 
-  const course = COURSES[courseId] ?? COURSES.cs301;
+  useEffect(function () {
+    var cancelled = false;
+    async function fetchData() {
+      try {
+        setLoading(true);
+        setError(null);
+        let [courseData, studentsData, sessionsData, assignmentsData] = await Promise.all([
+          getCourse(courseId),
+          getCourseStudents(courseId),
+          getCourseSessions(courseId),
+          getAssignments(courseId),
+        ]);
+        if (cancelled) return;
+        setCourse(courseData);
+        setStudents(studentsData);
+        setSessions(sessionsData);
+        setAssignments(assignmentsData);
+      } catch (err) {
+        if (cancelled) return;
+        setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    fetchData();
+    return function () {
+      cancelled = true;
+    };
+  }, [courseId]);
 
-  const filteredStudents = useMemo(
-    () =>
-      STUDENTS.filter((student) =>
-        student.name.toLowerCase().includes(filter.toLowerCase())
-      ),
-    [filter]
+  let filteredStudents = useMemo(
+    function () {
+      return students.filter(function (student) {
+        return student.name.toLowerCase().includes(filter.toLowerCase());
+      });
+    },
+    [filter, students]
   );
+
+  function scrollToAssignments() {
+    if (assignmentsRef.current) {
+      assignmentsRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }
+
+  function handleAssignFormChange(e) {
+    var { name, value } = e.target;
+    setAssignForm(function (prev) {
+      var next = {};
+      for (var key in prev) {
+        next[key] = prev[key];
+      }
+      next[name] = value;
+      return next;
+    });
+  }
+
+  async function handleCreateAssignment(e) {
+    e.preventDefault();
+    setAssignError(null);
+    try {
+      var parsed = assignmentSchema.parse({
+        course_id: courseId,
+        title: assignForm.title,
+        description: assignForm.description,
+        due_date: assignForm.due_date,
+      });
+      var created = await createAssignment(parsed);
+      setAssignments(function (prev) {
+        return [created].concat(prev);
+      });
+      setAssignForm({ title: "", description: "", due_date: "" });
+      setShowAssignForm(false);
+    } catch (err) {
+      if (err.issues) {
+        setAssignError(err.issues.map(function (i) { return i.message; }).join(", "));
+      } else {
+        setAssignError(err.message);
+      }
+    }
+  }
+
+  async function handleDeleteAssignment(id) {
+    try {
+      await deleteAssignment(id);
+      setAssignments(function (prev) {
+        return prev.filter(function (a) { return a.id !== id; });
+      });
+    } catch (err) {
+      setAssignError(err.message);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+        <p className="text-center text-gray-500">Loading...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+        <p className="text-center text-red-600">Error: {error}</p>
+      </div>
+    );
+  }
+
+  if (!course) {
+    return (
+      <div className="mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+        <p className="text-center text-gray-500">Course not found. This course may not exist yet.</p>
+      </div>
+    );
+  }
 
   return (
   <div className="mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
@@ -119,26 +199,31 @@ export default function CourseManagement() {
 
         {/* Search */}
 
-        <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:px-6">
+        {students.length > 0 && (
+          <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:px-6">
 
-          <input
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            placeholder="Search students..."
-            className="h-11 flex-1 rounded-lg border border-gray-300 px-4 text-sm outline-none focus:border-teal-700"
-          />
+            <input
+              value={filter}
+              onChange={function (e) { setFilter(e.target.value); }}
+              placeholder="Search students..."
+              className="h-11 flex-1 rounded-lg border border-gray-300 px-4 text-sm outline-none focus:border-teal-700"
+            />
 
-          <button className="h-11 rounded-lg border border-gray-300 px-4 hover:bg-gray-50">
-            Filter
-          </button>
+            <button className="h-11 rounded-lg border border-gray-300 px-4 hover:bg-gray-50">
+              Filter
+            </button>
 
-        </div>
+          </div>
+        )}
 
         {/* Student Table */}
 
         <div className="overflow-x-auto">
 
-          <table className="min-w-[650px] w-full">
+          {students.length === 0 ? (
+            <p className="px-6 py-8 text-center text-gray-400">No students enrolled yet.</p>
+          ) : (
+            <table className="min-w-[650px] w-full">
 
             <thead className="border-b bg-gray-50">
 
@@ -166,7 +251,9 @@ export default function CourseManagement() {
 
             <tbody>
 
-              {filteredStudents.map((student) => (
+              {filteredStudents.map(function (student) {
+
+                return (
 
                 <tr
                   key={student.id}
@@ -217,11 +304,14 @@ export default function CourseManagement() {
 
                 </tr>
 
-              ))}
+                );
+
+              })}
 
             </tbody>
 
           </table>
+          )}
 
         </div>
 
@@ -241,11 +331,18 @@ export default function CourseManagement() {
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
 
-            {MANAGEMENT_ACTIONS.map((action) => (
+            {MANAGEMENT_ACTIONS.map(function (action) {
+              return (
 
               <button
                 key={action.label}
-                onClick={() => action.to && navigate(action.to)}
+                onClick={function () {
+                  if (action.label === "New Assignment") {
+                    scrollToAssignments();
+                  } else if (action.to) {
+                    navigate(action.to);
+                  }
+                }}
                 className="rounded-xl border border-gray-200 p-4 text-left transition hover:border-teal-700 hover:bg-teal-50"
               >
 
@@ -259,7 +356,8 @@ export default function CourseManagement() {
 
               </button>
 
-            ))}
+              );
+            })}
 
           </div>
 
@@ -273,58 +371,168 @@ export default function CourseManagement() {
             Upcoming Sessions
           </h2>
 
-          <div className="space-y-4">
+          {sessions.length === 0 ? (
+            <p className="text-sm text-gray-400">No upcoming sessions.</p>
+          ) : (
+            <div className="space-y-4">
 
-            {SESSIONS.map((session, index) => (
+              {sessions.map(function (session, index) {
 
-              <div
-                key={index}
-                className="rounded-xl border border-gray-200 p-4 transition hover:bg-gray-50"
-              >
+                return (
 
-                <div className="flex gap-4">
+                <div
+                  key={index}
+                  className="rounded-xl border border-gray-200 p-4 transition hover:bg-gray-50"
+                >
 
-                  {/* Date */}
+                  <div className="flex gap-4">
 
-                  <div className="flex w-14 shrink-0 flex-col items-center justify-center rounded-lg bg-slate-100 py-2">
+                    {/* Date */}
 
-                    <span className="text-[11px] font-semibold uppercase text-gray-500">
-                      {session.date.month}
-                    </span>
+                    <div className="flex w-14 shrink-0 flex-col items-center justify-center rounded-lg bg-slate-100 py-2">
 
-                    <span className="text-xl font-bold text-slate-800">
-                      {session.date.day}
-                    </span>
+                      <span className="text-[11px] font-semibold uppercase text-gray-500">
+                        {session.date.month}
+                      </span>
 
-                  </div>
+                      <span className="text-xl font-bold text-slate-800">
+                        {session.date.day}
+                      </span>
 
-                  {/* Details */}
+                    </div>
 
-                  <div className="min-w-0 flex-1">
+                    {/* Details */}
 
-                    <h3 className="font-semibold text-slate-800">
-                      {session.title}
-                    </h3>
+                    <div className="min-w-0 flex-1">
 
-                    <p
-                      className={`mt-1 text-sm ${
-                        session.tone === "alert"
-                          ? "font-medium text-red-600"
-                          : "text-gray-500"
-                      }`}
-                    >
-                      {session.meta}
-                    </p>
+                      <h3 className="font-semibold text-slate-800">
+                        {session.title}
+                      </h3>
+
+                      <p
+                        className={`mt-1 text-sm ${
+                          session.tone === "alert"
+                            ? "font-medium text-red-600"
+                            : "text-gray-500"
+                        }`}
+                      >
+                        {session.meta}
+                      </p>
+
+                    </div>
 
                   </div>
 
                 </div>
 
+                );
+
+              })}
+
+            </div>
+          )}
+
+        </div>
+
+        {/* Assignments */}
+
+        <div ref={assignmentsRef} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+
+          <h2 className="mb-5 text-2xl font-semibold text-slate-800">
+            Assignments
+          </h2>
+
+          {assignments.length === 0 ? (
+            <p className="text-sm text-gray-400">No assignments yet. Create one below.</p>
+          ) : (
+            <div className="space-y-3">
+              {assignments.map(function (assignment) {
+                return (
+                  <div
+                    key={assignment.id}
+                    className="flex items-start justify-between gap-3 rounded-xl border border-gray-200 p-4 transition hover:bg-gray-50"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold text-slate-800">
+                        {assignment.title}
+                      </h3>
+                      <p className="mt-1 text-sm text-gray-500">
+                        Due: {assignment.due_date}
+                      </p>
+                    </div>
+                    <button
+                      onClick={function () { handleDeleteAssignment(assignment.id); }}
+                      className="shrink-0 rounded-md p-1.5 text-gray-400 transition hover:bg-red-50 hover:text-red-600"
+                      title="Delete assignment"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {assignError && (
+            <p className="mt-3 text-sm text-red-600">{assignError}</p>
+          )}
+
+          {!showAssignForm && (
+            <button
+              onClick={function () { setShowAssignForm(true); setAssignError(null); }}
+              className="mt-4 w-full rounded-lg border border-dashed border-gray-300 px-4 py-3 text-sm font-medium text-gray-500 transition hover:border-teal-700 hover:bg-teal-50 hover:text-teal-700"
+            >
+              + New Assignment
+            </button>
+          )}
+
+          {showAssignForm && (
+            <form onSubmit={handleCreateAssignment} className="mt-4 rounded-xl border border-gray-200 p-4">
+              <div className="space-y-3">
+                <input
+                  name="title"
+                  value={assignForm.title}
+                  onChange={handleAssignFormChange}
+                  placeholder="Assignment title"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-teal-700"
+                  required
+                />
+                <textarea
+                  name="description"
+                  value={assignForm.description}
+                  onChange={handleAssignFormChange}
+                  placeholder="Description (optional)"
+                  rows={2}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-teal-700"
+                />
+                <input
+                  name="due_date"
+                  value={assignForm.due_date}
+                  onChange={handleAssignFormChange}
+                  type="date"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-teal-700"
+                  required
+                />
               </div>
-
-            ))}
-
-          </div>
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="submit"
+                  className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-teal-800"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={function () { setShowAssignForm(false); setAssignError(null); }}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )}
 
         </div>
 
@@ -333,5 +541,5 @@ export default function CourseManagement() {
     </div>
 
   </div>
-);
+  );
 }

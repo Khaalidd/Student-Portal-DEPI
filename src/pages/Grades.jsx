@@ -1,9 +1,10 @@
 // Grades.jsx
-import { Fragment } from 'react';
+import { Fragment, useState, useEffect } from 'react';
+import { getSemesters, getSemesterCourses } from '../api/gradesApi';
 
 // Colors for each letter grade. Keeping this in one place makes it easy
 // to change a color later without hunting through the JSX.
-const GRADE_STYLES = {
+var GRADE_STYLES = {
   A: { bg: 'bg-teal-100', text: 'text-teal-800' },
   'A-': { bg: 'bg-teal-100', text: 'text-teal-800' },
   'B+': { bg: 'bg-blue-100', text: 'text-blue-800' },
@@ -14,8 +15,8 @@ const GRADE_STYLES = {
   F: { bg: 'bg-rose-100', text: 'text-rose-800' },
 };
 
-// Overall GPA numbers shown in the summary card.
-const GPA_SUMMARY = {
+// Overall GPA numbers shown in the summary card — computed stats, kept as placeholders.
+var GPA_SUMMARY = {
   cumulativeGpa: '3.84',
   completedCredits: 112,
   majorGpa: '3.91',
@@ -23,29 +24,9 @@ const GPA_SUMMARY = {
   semesterGpa: '3.95',
 };
 
-// Every semester and the courses taken that semester.
-const SEMESTERS = [
-  {
-    id: 'fall-2024',
-    label: 'Fall 2024',
-    courses: [
-      { id: 1, name: 'Data Structures & Algorithms', code: 'CS 301', subject: 'Computer Science', credits: 4, grade: 'A' },
-      { id: 2, name: 'Linear Algebra', code: 'MATH 240', subject: 'Mathematics', credits: 3, grade: 'A-' },
-    ],
-  },
-  {
-    id: 'spring-2024',
-    label: 'Spring 2024',
-    courses: [
-      { id: 3, name: 'Artificial Intelligence', code: 'CS 410', subject: 'Computer Science', credits: 4, grade: 'A' },
-      { id: 4, name: 'Technical Writing', code: 'ENG 205', subject: 'English', credits: 3, grade: 'B+' },
-    ],
-  },
-];
-
 // The colored pill showing a letter grade, e.g. "A" or "B+".
 function GradeBadge({ grade }) {
-  const styles = GRADE_STYLES[grade] || { bg: 'bg-gray-100', text: 'text-gray-700' };
+  var styles = GRADE_STYLES[grade] || { bg: 'bg-gray-100', text: 'text-gray-700' };
 
   return (
     <span className={`inline-block rounded-full px-3 py-1 text-sm font-semibold ${styles.bg} ${styles.text}`}>
@@ -55,27 +36,27 @@ function GradeBadge({ grade }) {
 }
 
 // The card on the left (desktop) / top (mobile) with overall GPA numbers.
-function GpaSummaryCard() {
+function GpaSummaryCard({ hasData }) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-6 flex flex-col gap-6">
       <div>
         <h2 className="text-lg font-semibold text-gray-900">Cumulative GPA</h2>
-        <p className="text-sm text-gray-500">Based on {GPA_SUMMARY.completedCredits} completed credits</p>
-        <p className="mt-2 text-4xl font-bold text-teal-800">{GPA_SUMMARY.cumulativeGpa}</p>
+        <p className="text-sm text-gray-500">Based on {hasData ? GPA_SUMMARY.completedCredits : 0} completed credits</p>
+        <p className="mt-2 text-4xl font-bold text-teal-800">{hasData ? GPA_SUMMARY.cumulativeGpa : 'N/A'}</p>
       </div>
 
       <div className="flex flex-col divide-y divide-gray-100 border-t border-gray-100">
         <div className="flex items-center justify-between py-3">
           <span className="text-sm text-gray-600">Major GPA</span>
-          <span className="text-sm font-semibold text-gray-900">{GPA_SUMMARY.majorGpa}</span>
+          <span className="text-sm font-semibold text-gray-900">{hasData ? GPA_SUMMARY.majorGpa : 'N/A'}</span>
         </div>
         <div className="flex items-center justify-between py-3">
           <span className="text-sm text-gray-600">Minor GPA</span>
-          <span className="text-sm font-semibold text-gray-900">{GPA_SUMMARY.minorGpa}</span>
+          <span className="text-sm font-semibold text-gray-900">{hasData ? GPA_SUMMARY.minorGpa : 'N/A'}</span>
         </div>
         <div className="flex items-center justify-between py-3">
           <span className="text-sm text-gray-600">This Semester</span>
-          <span className="text-sm font-semibold text-gray-900">{GPA_SUMMARY.semesterGpa}</span>
+          <span className="text-sm font-semibold text-gray-900">{hasData ? GPA_SUMMARY.semesterGpa : 'N/A'}</span>
         </div>
       </div>
     </div>
@@ -99,7 +80,7 @@ function TranscriptTableRow({ course }) {
 }
 
 // Desktop: the full table, split into a header row per semester.
-function TranscriptTable() {
+function TranscriptTable({ semesters, coursesBySemester }) {
   return (
     <div className="hidden md:block rounded-xl border border-gray-200 bg-white p-6">
       <h2 className="text-lg font-semibold text-gray-900 mb-4">Course History</h2>
@@ -112,18 +93,20 @@ function TranscriptTable() {
           </tr>
         </thead>
         <tbody>
-          {SEMESTERS.map((semester) => (
-            <Fragment key={semester.id}>
-              <tr>
-                <td colSpan={3} className="pt-6 pb-2 text-sm font-semibold text-gray-700">
-                  {semester.label}
-                </td>
-              </tr>
-              {semester.courses.map((course) => (
-                <TranscriptTableRow key={course.id} course={course} />
-              ))}
-            </Fragment>
-          ))}
+          {semesters.map(function (semester) {
+            return (
+              <Fragment key={semester.id}>
+                <tr>
+                  <td colSpan={3} className="pt-6 pb-2 text-sm font-semibold text-gray-700">
+                    {semester.label}
+                  </td>
+                </tr>
+                {(coursesBySemester[semester.id] || []).map(function (course) {
+                  return <TranscriptTableRow key={course.id} course={course} />;
+                })}
+              </Fragment>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -144,23 +127,69 @@ function TranscriptCard({ course }) {
 }
 
 // Mobile: semesters stacked as sections of cards instead of a table.
-function TranscriptCardList() {
+function TranscriptCardList({ semesters, coursesBySemester }) {
   return (
     <div className="md:hidden flex flex-col gap-6">
       <h2 className="text-lg font-semibold text-gray-900">Course History</h2>
-      {SEMESTERS.map((semester) => (
-        <div key={semester.id} className="flex flex-col gap-3">
-          <h3 className="text-sm font-semibold text-gray-600">{semester.label}</h3>
-          {semester.courses.map((course) => (
-            <TranscriptCard key={course.id} course={course} />
-          ))}
-        </div>
-      ))}
+      {semesters.map(function (semester) {
+        return (
+          <div key={semester.id} className="flex flex-col gap-3">
+            <h3 className="text-sm font-semibold text-gray-600">{semester.label}</h3>
+            {(coursesBySemester[semester.id] || []).map(function (course) {
+              return <TranscriptCard key={course.id} course={course} />;
+            })}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
 export default function Grades() {
+  var [semesters, setSemesters] = useState([]);
+  var [coursesBySemester, setCoursesBySemester] = useState({});
+  var [loading, setLoading] = useState(true);
+  var [error, setError] = useState('');
+
+  useEffect(function fetchGrades() {
+    setLoading(true);
+    Promise.all([getSemesters(), getSemesterCourses()])
+      .then(function (_a) {
+        var semesterData = _a[0];
+        var allCourses = _a[1];
+
+        setSemesters(semesterData);
+
+        // Group courses under their semester
+        var grouped = {};
+        for (var i = 0; i < allCourses.length; i++) {
+          var c = allCourses[i];
+          if (!grouped[c.semester_id]) {
+            grouped[c.semester_id] = [];
+          }
+          grouped[c.semester_id].push(c);
+        }
+        setCoursesBySemester(grouped);
+        setError('');
+      })
+      .catch(function (err) {
+        setError(err.message);
+      })
+      .finally(function () {
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) {
+    return <p className="text-sm text-gray-500">Loading grades...</p>;
+  }
+
+  if (error) {
+    return <p className="text-sm text-red-600">Error: {error}</p>;
+  }
+
+  var hasData = semesters.length > 0;
+
   return (
     <div className="flex flex-col gap-6">
       {/* Page header */}
@@ -178,12 +207,18 @@ export default function Grades() {
           Stacks on mobile (flex-col), side by side on large screens (lg:flex-row). */}
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <div className="lg:w-80 lg:shrink-0">
-          <GpaSummaryCard />
+          <GpaSummaryCard hasData={hasData} />
         </div>
 
         <div className="flex-1">
-          <TranscriptTable />
-          <TranscriptCardList />
+          {hasData ? (
+            <>
+              <TranscriptTable semesters={semesters} coursesBySemester={coursesBySemester} />
+              <TranscriptCardList semesters={semesters} coursesBySemester={coursesBySemester} />
+            </>
+          ) : (
+            <p className="text-sm text-gray-500 py-8">No grades recorded yet.</p>
+          )}
         </div>
       </div>
     </div>
